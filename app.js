@@ -2,24 +2,26 @@ const express = require("express");
 const path = require("path");
 const sequelize = require("./database");
 const User = require("./models/User");
+const UserProfile = require("./models/UserProfile");
+const userRouter = require("./routes/userRouter");
+const headersMiddleWare = require("./middlewares/headersMiddleWare");
+const isAuthMiddleWare = require("./middlewares/isAuthMiddleWare");
 
 const app = express();
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PUT, PATCH, DELETE"
-  );
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  next();
-});
+app.use(headersMiddleWare);
+// app.use(isAuthMiddleWare);
+
+app.use(userRouter);
+
+User.hasOne(UserProfile, { onDelete: "CASCADE" });
+UserProfile.belongsTo(User);
 
 sequelize
-  .sync({ force: true })
+  .sync({ force: false })
   .then((result) => {
     app.listen(8000);
   })
