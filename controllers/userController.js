@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const sendEmail = require("../helpers/sendEmail");
 const { Op } = require("sequelize");
+const { v4 } = require("uuid");
 
 const SECRET_KEY = "supersupersecretkey";
 
@@ -83,26 +84,15 @@ const registerActivation = async (req, res, next) => {
 };
 
 const login = async (req, res, next) => {
-  const { username, email, password } = req.body;
+  const { email_username, password } = req.body;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    if (!username && !email) {
-      return res.status(400).json({
-        errors: { errors },
-        errors2: "لطفا ایمیل یا نام کاربری خود را وارد کنید",
-      });
-    }
     return res.status(400).json(errors);
   }
-  if (!username && !email) {
-    return res.status(400).json({
-      errors: { errors },
-      errors2: "لطفا ایمیل یا نام کاربری خود را وارد کنید",
-    });
-  }
+
   const user = await User.findOne({
     where: {
-      [Op.or]: [{ email: email || null }, { username: username || null }],
+      [Op.or]: [{ email: email_username }, { username: email_username }],
     },
   });
 
@@ -124,7 +114,7 @@ const login = async (req, res, next) => {
     const accessToken = await jwt.sign(
       { email: user.email, userId: user.id },
       SECRET_KEY,
-      { expiresIn: "5min" }
+      { expiresIn: "10m" }
     );
     const refreshToken = await jwt.sign(
       { email: user.email, userId: user.id },
@@ -150,12 +140,79 @@ const refresh = (req, res, next) => {
     if (err) {
       return res.status(401).json({ message: "ex" });
     }
-    const access = jwt.sign({ email: info.email, userId: info.userId }, SECRET_KEY,{expiresIn:'2min'});
-    return res.status(200).json({access:access})
+    const access = jwt.sign(
+      { email: info.email, userId: info.userId },
+      SECRET_KEY,
+      { expiresIn: "10m" }
+    );
+    return res.status(200).json({ access: access });
   });
+};
+
+const reset_password = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json(errors);
+  }
+  const { email } = req.body;
+  try {
+    const user = await User.findOne({ where: { email } });
+
+    user.reset_password_token = v4();
+    await user.save();
+    const result = await sendEmail(
+      email,
+      "بازیابی رمز عبور",
+      `لینک بازیابی رمز عبور <a href="http://localhost:5173/reset-password/new/${user.reset_password_token}">link</a>`,
+      `لینک بازیابی رمز عبور <a href="http://localhost:5173/reset-password/new/${user.reset_password_token}">link</a>`
+    );
+    return res.status(200).json({
+      message: "لینک بازیابی رمز عبور با موفقیت به ایمیل شما ارسال شد",
+    });
+  } catch (err) {
+    console.log(err);
+    return res
+      .status(500)
+      .json({ message: "خطایی رخ داد لطفا دوباره امتحان کنید" });
+  }
+};
+
+const reset_password_new = async (req, res, next) => {
+  const { reset_password_token, password } = req.body;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json(errors);
+  }
+  
+  try {
+    const user = await User.findOne({
+      where: { reset_password_token },
+    });
+
+    const hashedPassword = bcrypt.hash(password, 12, async (err, hash) => {
+      if (err) {
+        return res.status(500).json({
+          message: "خطایی رخ داد لطفا دوباره امتحان کنید",
+        });
+      }
+      user.reset_password_token = null;
+      user.password = hash;
+      await user.save();
+      return res.status(200).json({
+        message: "رمز عبور شما با موفقیت تغییر کرد",
+      });
+    });
+  } catch (err) {
+    console.log(err);
+    return res
+      .status(500)
+      .json({ message: "خطایی رخ داد لطفا دوباره امتحان کنید" });
+  }
 };
 
 module.exports.register = register;
 module.exports.registerActivation = registerActivation;
 module.exports.login = login;
 module.exports.refresh = refresh;
+module.exports.reset_password = reset_password;
+module.exports.reset_password_new = reset_password_new;

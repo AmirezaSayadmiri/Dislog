@@ -12,8 +12,8 @@ const isAuthMiddleWare = async (req, res, next) => {
       return res.status(401).json({ message: "unauthorizated" });
     } catch (err) {
       return res
-        .status(500)
-        .json({ message: "خطایی رخ داد لطفا دوباره امتحان کنید" });
+        .status(401)
+        .json({ message: "unauthorizated" });
     }
   }
   res.status(401).json({ message: "unauthorizated" });
