@@ -22,13 +22,22 @@ const UserProfile = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
-    country: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
     age: {
       type: DataTypes.INTEGER,
       allowNull: true,
+    },
+    skills: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    experiences: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    score: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue:0
     },
   },
   { timestamps: true }
