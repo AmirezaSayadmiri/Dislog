@@ -143,7 +143,7 @@ router.delete(
   deleteProfileImage
 );
 
-router.post("/profile/edit", isAuthMiddleWare, postProfile);
+router.post("/profile", isAuthMiddleWare, postProfile);
 
 router.post(
   "/profile/new-password",
