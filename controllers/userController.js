@@ -12,7 +12,7 @@ const { deleteFile } = require("../helpers/deleteFile");
 
 const SECRET_KEY = "supersupersecretkey";
 
-const register = async (req, res, next) => {
+const postRegister = async (req, res, next) => {
   const { email, password } = req.body;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -45,7 +45,7 @@ const register = async (req, res, next) => {
   }
 };
 
-const registerActivation = async (req, res, next) => {
+const postRegisterActivation = async (req, res, next) => {
   const { activation_code } = req.body;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -57,12 +57,12 @@ const registerActivation = async (req, res, next) => {
         user.activation_code = null;
         user.is_active = true;
         await user.save();
-        const accessToken = await jwt.sign(
+        const accessToken = jwt.sign(
           { email: user.email, userId: user.id },
           SECRET_KEY,
           { expiresIn: "2min" }
         );
-        const refreshToken = await jwt.sign(
+        const refreshToken = jwt.sign(
           { email: user.email, userId: user.id },
           SECRET_KEY,
           { expiresIn: "1d" }
@@ -86,7 +86,7 @@ const registerActivation = async (req, res, next) => {
   }
 };
 
-const login = async (req, res, next) => {
+const postLogin = async (req, res, next) => {
   const { email_username, password } = req.body;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -133,7 +133,7 @@ const login = async (req, res, next) => {
   });
 };
 
-const refresh = (req, res, next) => {
+const postRefresh = (req, res, next) => {
   const { refresh } = req.body;
   if (!refresh) {
     return res.status(400).json({ message: "unvalid refresh token" });
@@ -152,7 +152,7 @@ const refresh = (req, res, next) => {
   });
 };
 
-const reset_password = async (req, res, next) => {
+const postResetPassword = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json(errors);
@@ -180,7 +180,7 @@ const reset_password = async (req, res, next) => {
   }
 };
 
-const reset_password_new = async (req, res, next) => {
+const postResetPasswordNew = async (req, res, next) => {
   const { reset_password_token, password } = req.body;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -213,7 +213,7 @@ const reset_password_new = async (req, res, next) => {
   }
 };
 
-const resend_email_activation_code = async (req, res, next) => {
+const postResendEmailActivationCode = async (req, res, next) => {
   const { email } = req.body;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -245,7 +245,7 @@ const resend_email_activation_code = async (req, res, next) => {
   }
 };
 
-const profile = async (req, res, next) => {
+const getProfile = async (req, res, next) => {
   const user = await User.findOne({ where: { id: req.userId } });
   const profile = await UserProfile.findOne({ where: { userId: user.id } });
   if (user && profile) {
@@ -257,22 +257,14 @@ const profile = async (req, res, next) => {
   return res.status(401).json({ message: "unauthorizated" });
 };
 
-const setProfileImage = async (req, res, next) => {
-  const { userId } = req.params;
+const postProfileImage = async (req, res, next) => {
+  const userId = req.userId;
   const image = req.file;
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json(errors);
-  }
 
   if (!image) {
     return res
       .status(400)
       .json({ message: "لطفا عکس پروفایل خود را تعیین کنید" });
-  }
-
-  if (userId != req.userId) {
-    return res.status(401).json({ message: "unauthorizated" });
   }
 
   const profile = await UserProfile.findOne({ where: { userId } });
@@ -288,15 +280,8 @@ const setProfileImage = async (req, res, next) => {
 };
 
 const deleteProfileImage = async (req, res, next) => {
-  const { userId } = req.params;
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json(errors);
-  }
+  const userId = req.userId;
 
-  if (userId != req.userId) {
-    return res.status(401).json({ message: "unauthorizated" });
-  }
   const profile = await UserProfile.findOne({ where: { userId } });
 
   deleteFile(profile.image);
@@ -305,65 +290,89 @@ const deleteProfileImage = async (req, res, next) => {
   return res.status(200).json({ message: "عکس پروفایل شما با موفقیت حذف شد" });
 };
 
-const setProfile = async (req, res, next) => {
+const postProfile = async (req, res, next) => {
   const { bio, age, skills, experiences, gender } = req.body;
 
-  const profile = await UserProfile.findOne({where:{userId:req.userId}})
+  const profile = await UserProfile.findOne({ where: { userId: req.userId } });
 
-  if(typeof bio!=="undefined"){
-    if(bio===""){
-      profile.bio=null
-    }else{
+  if (typeof bio !== "undefined") {
+    if (bio === "") {
+      profile.bio = null;
+    } else {
       profile.bio = bio;
     }
   }
 
-  if(typeof age!=="undefined"){
-    if(age===""){
-      profile.age=null
-    }else{
+  if (typeof age !== "undefined") {
+    if (age === "") {
+      profile.age = null;
+    } else {
       profile.age = age;
     }
   }
 
-  if(typeof gender!=="undefined"){
-    if(gender===""){
-      profile.gender=null
-    }else{
+  if (typeof gender !== "undefined") {
+    if (gender === "") {
+      profile.gender = null;
+    } else {
       profile.gender = gender;
     }
   }
 
-  if(typeof skills!=="undefined"){
-    if(skills===""){
-      profile.skills=null
-    }else{
+  if (typeof skills !== "undefined") {
+    if (skills === "") {
+      profile.skills = null;
+    } else {
       profile.skills = skills;
     }
   }
-  
-  if(typeof experiences!=="undefined"){
-    if(experiences===""){
-      profile.experiences=null
-    }else{
+
+  if (typeof experiences !== "undefined") {
+    if (experiences === "") {
+      profile.experiences = null;
+    } else {
       profile.experiences = experiences;
     }
   }
 
-  await profile.save()
+  await profile.save();
 
-  return res.status(200).json({message:"اطلاعات شما با موفقیت ویرایش شد"})
-  
+  return res.status(200).json({ message: "اطلاعات شما با موفقیت ویرایش شد" });
 };
 
-module.exports.register = register;
-module.exports.registerActivation = registerActivation;
-module.exports.login = login;
-module.exports.refresh = refresh;
-module.exports.reset_password = reset_password;
-module.exports.reset_password_new = reset_password_new;
-module.exports.resend_email_activation_code = resend_email_activation_code;
-module.exports.profile = profile;
-module.exports.setProfileImage = setProfileImage;
+const postProfileNewPassword = async (req, res, next) => {
+  const { password, confirm_password, new_password } = req.body;
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json(errors);
+  }
+
+  const userId = req.userId;
+  const user = await User.findOne({ where: { id: userId } });
+
+  bcrypt.hash(new_password, 12, async (err, hash) => {
+    if (err) {
+      return res
+        .status(500)
+        .json({ message: "خطایی رخ داد لطفا بعدا امتحان کنید" });
+    }
+
+    user.password = hash;
+    await user.save()
+    return res.status(200).json({message:"رمز عبور شما با موفقیت تغییر کرد"})
+  });
+};
+
+module.exports.postRegister = postRegister;
+module.exports.postRegisterActivation = postRegisterActivation;
+module.exports.postLogin = postLogin;
+module.exports.postRefresh = postRefresh;
+module.exports.postResetPassword = postResetPassword;
+module.exports.postResetPasswordNew = postResetPasswordNew;
+module.exports.postResendEmailActivationCode = postResendEmailActivationCode;
+module.exports.getProfile = getProfile;
+module.exports.postProfileImage = postProfileImage;
 module.exports.deleteProfileImage = deleteProfileImage;
-module.exports.setProfile = setProfile;
+module.exports.postProfile = postProfile;
+module.exports.postProfileNewPassword = postProfileNewPassword;

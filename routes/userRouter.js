@@ -1,18 +1,20 @@
 const express = require("express");
-const { body, param } = require("express-validator");
+const { body } = require("express-validator");
+const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const {
-  register,
-  registerActivation,
-  login,
-  refresh,
-  reset_password_new,
-  reset_password,
-  resend_email_activation_code,
-  profile,
-  setProfileImage,
   deleteProfileImage,
-  setProfile,
+  postProfile,
+  postProfileNewPassword,
+  getProfile,
+  postResendEmailActivationCode,
+  postResetPassword,
+  postResetPasswordNew,
+  postRefresh,
+  postLogin,
+  postRegisterActivation,
+  postRegister,
+  postProfileImage,
 } = require("../controllers/userController");
 const isGuestMiddleWare = require("../middlewares/isGuestMiddleWare");
 const isAuthMiddleWare = require("../middlewares/isAuthMiddleWare");
@@ -53,7 +55,7 @@ router.post(
         throw new Error("رمز عبور ها مطابقت ندارند");
       }
     }),
-  register
+  postRegister
 );
 
 router.post(
@@ -62,7 +64,7 @@ router.post(
   body("activation_code")
     .notEmpty()
     .withMessage("لطفا کد تایید شده را وارد کنید"),
-  registerActivation
+  postRegisterActivation
 );
 
 router.post(
@@ -72,10 +74,10 @@ router.post(
     .notEmpty()
     .withMessage("لطفا نام کاربری یا ایمیل خود را وارد کنید"),
   body("password").notEmpty().withMessage("لطفا رمز عبور خود را وارد کنید"),
-  login
+  postLogin
 );
 
-router.post("/refresh", refresh);
+router.post("/refresh", postRefresh);
 
 router.post(
   "/reset-password",
@@ -91,7 +93,7 @@ router.post(
         throw new Error("ایمیل وارد شده اشتباه است");
       }
     }),
-  reset_password
+  postResetPassword
 );
 
 router.post(
@@ -109,7 +111,7 @@ router.post(
         throw new Error("توکن وارد شده اشتباه است");
       }
     }),
-  reset_password_new
+  postResetPasswordNew
 );
 
 router.post(
@@ -120,44 +122,55 @@ router.post(
     .withMessage("لطفا ایمیل خود را وارد کنید")
     .isEmail()
     .withMessage("ایمیل نامعتبر است"),
-  resend_email_activation_code
+  postResendEmailActivationCode
 );
 
-router.post("/profile", isAuthMiddleWare, profile);
+router.get("/profile", isAuthMiddleWare, getProfile);
+
 router.post(
-  "/profile/set-user-image/:userId",
+  "/profile/set-user-image",
   isAuthMiddleWare,
-  param("userId")
-    .notEmpty()
-    .withMessage("لطفا آیدی کاربر را وارد کنید")
-    .custom(async (value) => {
-      const user = await User.findOne({ where: { id: value } });
-      if (!user) {
-        throw Error("آیدی کاربر اشتباه است");
-      }
-    }),
   multer({
     storage: userProfileStorage,
     fileFilter: userProfileFileFilter,
   }).single("image"),
-  setProfileImage
+  postProfileImage
 );
 
 router.delete(
-  "/profile/delete-user-image/:userId",
+  "/profile/delete-user-image/",
   isAuthMiddleWare,
-  param("userId")
-    .notEmpty()
-    .withMessage("لطفا آیدی کاربر را وارد کنید")
-    .custom(async (value) => {
-      const user = await User.findOne({ where: { id: value } });
-      if (!user) {
-        throw Error("آیدی کاربر اشتباه است");
-      }
-    }),
   deleteProfileImage
 );
 
-router.post("/profile/edit", isAuthMiddleWare, setProfile);
+router.post("/profile/edit", isAuthMiddleWare, postProfile);
+
+router.post(
+  "/profile/new-password",
+  isAuthMiddleWare,
+  body("password")
+    .notEmpty()
+    .withMessage("لطفا رمز عبور فعلی خود را وارد کنید")
+    .custom(async (value, { req }) => {
+      const userId = req.userId;
+      const user = await User.findOne({ where: { id: userId } });
+      const result = bcrypt.compareSync(value, user.password);
+      if (!result) {
+        throw new Error("رمز عبور فعلی شما اشتباه است");
+      }
+    }),
+  body("new_password")
+    .notEmpty()
+    .withMessage("لطفا رمز عبور جدید خود را وارد کنید"),
+  body("confirm_password")
+    .notEmpty()
+    .withMessage("لطفا تاییدیه رمز عبور جدید خود را وارد کنید")
+    .custom(async (value, { req }) => {
+      if (value !== req.body.new_password) {
+        throw new Error("رمز عبور های جدید با هم مطابقت ندارند");
+      }
+    }),
+  postProfileNewPassword
+);
 
 module.exports = router;
