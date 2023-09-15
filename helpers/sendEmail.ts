@@ -1,16 +1,16 @@
-const nodemailer = require("nodemailer");
+import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
   host: "smtp.gmail.com",
   auth: {
     user: "asanime84@gmail.com",
-    pass: "xeereclljyceraop",
+    pass: "ppia ruar orlj logn",
   },
 
 });
 
-const sendEmail = async (to, subject, text, html) => {
+const sendEmail = async (to:string, subject:string, text:string, html:string) => {
   const mailData = {
     from: "asanime84@gmail.com",
     to,
@@ -20,9 +20,9 @@ const sendEmail = async (to, subject, text, html) => {
   };
    transporter.sendMail(mailData, (err, info) => {
     if (err) {
-      throw Error(err)
+      throw new Error(err.message)
     }
   });
 };
 
-module.exports = sendEmail;
+export default sendEmail;

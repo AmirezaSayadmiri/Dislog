@@ -1,12 +1,14 @@
-const jwt = require("jsonwebtoken");
+import { RequestHandler } from "express";
+import jwt from "jsonwebtoken";
+import { CustomRequestHandler, wrapperRequestHandler } from "../types/types";
 
-const isGuestMiddleWare = async (req, res, next) => {
+const isGuestMiddleWare: CustomRequestHandler = async (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (token) {
     try {
       jwt.verify(token, "supersupersecretkey", (isValidToken) => {
         if (isValidToken) {
-            return res.status(401).json({ message: "you are authenticated" });
+          return res.status(401).json({ message: "you are authenticated" });
         }
         return next();
       });
@@ -16,7 +18,7 @@ const isGuestMiddleWare = async (req, res, next) => {
         .json({ message: "خطایی رخ داد لطفا دوباره امتحان کنید" });
     }
   }
-  next()
+  next();
 };
 
-module.exports = isGuestMiddleWare;
+export default wrapperRequestHandler(isGuestMiddleWare);

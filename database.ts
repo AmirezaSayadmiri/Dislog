@@ -1,4 +1,4 @@
-const { Sequelize } = require("sequelize");
+import { Sequelize } from "sequelize";
 
 const sequelize = new Sequelize("dislog", "root", "as84", {
   dialect: "mysql",
@@ -6,4 +6,4 @@ const sequelize = new Sequelize("dislog", "root", "as84", {
   logging: false,
 });
 
-module.exports = sequelize;
+export default sequelize;

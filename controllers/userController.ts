@@ -1,18 +1,19 @@
-const { validationResult } = require("express-validator");
-const User = require("../models/User");
-const UserProfile = require("../models/UserProfile");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
-const sendEmail = require("../helpers/sendEmail");
-const { Op } = require("sequelize");
-const { v4 } = require("uuid");
-const fs = require("fs");
-const path = require("path");
-const { deleteFile } = require("../helpers/deleteFile");
+import { validationResult } from "express-validator";
+import User from "../models/User";
+import UserProfile from "../models/UserProfile";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import sendEmail from "../helpers/sendEmail";
+import { Op } from "sequelize";
+import { v4 } from "uuid";
+import fs from "fs";
+import path from "path";
+import deleteFile from "../helpers/deleteFile";
+import { CustomRequestHandler, wrapperRequestHandler } from "../types/types";
 
 const SECRET_KEY = "supersupersecretkey";
 
-const postRegister = async (req, res, next) => {
+const postRegister: CustomRequestHandler = async (req, res, next) => {
   const { email, password } = req.body;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -20,7 +21,7 @@ const postRegister = async (req, res, next) => {
   }
   try {
     const user = await User.create({ email });
-    bcrypt.hash(password, 12, async function (err, hash) {
+    bcrypt.hash(password, 12, async function (err, hash: string) {
       if (err) {
         return res
           .status(500)
@@ -45,7 +46,7 @@ const postRegister = async (req, res, next) => {
   }
 };
 
-const postRegisterActivation = async (req, res, next) => {
+const postRegisterActivation: CustomRequestHandler = async (req, res, next) => {
   const { activation_code } = req.body;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -86,7 +87,7 @@ const postRegisterActivation = async (req, res, next) => {
   }
 };
 
-const postLogin = async (req, res, next) => {
+const postLogin: CustomRequestHandler = async (req, res, next) => {
   const { email_username, password } = req.body;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -97,7 +98,7 @@ const postLogin = async (req, res, next) => {
     where: {
       [Op.or]: [{ email: email_username }, { username: email_username }],
     },
-  });
+  }) as User;
 
   if (!user) {
     return res.status(400).json({ message: "اطلاعات وارد شده اشتباه است" });
@@ -110,7 +111,7 @@ const postLogin = async (req, res, next) => {
     });
   }
 
-  bcrypt.compare(password, user.password, async (err, result) => {
+  bcrypt.compare(password, user.password!, async (err, result) => {
     if (!result) {
       return res.status(400).json({ message: "اطلاعات وارد شده اشتباه است" });
     }
@@ -133,13 +134,13 @@ const postLogin = async (req, res, next) => {
   });
 };
 
-const postRefresh = (req, res, next) => {
+const postRefresh: CustomRequestHandler = (req, res, next) => {
   const { refresh } = req.body;
   if (!refresh) {
     return res.status(400).json({ message: "unvalid refresh token" });
   }
 
-  jwt.verify(refresh, SECRET_KEY, (err, info) => {
+  jwt.verify(refresh, SECRET_KEY, (err:any, info:any) => {
     if (err) {
       return res.status(401).json({ message: "ex" });
     }
@@ -152,14 +153,14 @@ const postRefresh = (req, res, next) => {
   });
 };
 
-const postResetPassword = async (req, res, next) => {
+const postResetPassword: CustomRequestHandler = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json(errors);
   }
   const { email } = req.body;
   try {
-    const user = await User.findOne({ where: { email } });
+    const user = (await User.findOne({ where: { email } })) as User;
 
     user.reset_password_token = v4();
     await user.save();
@@ -180,7 +181,7 @@ const postResetPassword = async (req, res, next) => {
   }
 };
 
-const postResetPasswordNew = async (req, res, next) => {
+const postResetPasswordNew: CustomRequestHandler = async (req, res, next) => {
   const { reset_password_token, password } = req.body;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -188,9 +189,9 @@ const postResetPasswordNew = async (req, res, next) => {
   }
 
   try {
-    const user = await User.findOne({
+    const user = (await User.findOne({
       where: { reset_password_token },
-    });
+    })) as User;
 
     const hashedPassword = bcrypt.hash(password, 12, async (err, hash) => {
       if (err) {
@@ -213,14 +214,18 @@ const postResetPasswordNew = async (req, res, next) => {
   }
 };
 
-const postResendEmailActivationCode = async (req, res, next) => {
+const postResendEmailActivationCode: CustomRequestHandler = async (
+  req,
+  res,
+  next
+) => {
   const { email } = req.body;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json(errors);
   }
 
-  const user = await User.findOne({ where: { email } });
+  const user = (await User.findOne({ where: { email } })) as User;
   if (!user) {
     return res.status(400).json({ message: "ایمیل اشتباه است" });
   }
@@ -245,9 +250,11 @@ const postResendEmailActivationCode = async (req, res, next) => {
   }
 };
 
-const getProfile = async (req, res, next) => {
-  const user = await User.findOne({ where: { id: req.userId } });
-  const profile = await UserProfile.findOne({ where: { userId: user.id } });
+const getProfile: CustomRequestHandler = async (req, res, next) => {
+  const user = (await User.findOne({ where: { id: req.userId } })) as User;
+  const profile = (await UserProfile.findOne({
+    where: { userId: user.id },
+  })) as UserProfile;
   if (user && profile) {
     return res.status(200).json({
       user,
@@ -257,7 +264,7 @@ const getProfile = async (req, res, next) => {
   return res.status(401).json({ message: "unauthorizated" });
 };
 
-const postProfileImage = async (req, res, next) => {
+const postProfileImage: CustomRequestHandler = async (req, res, next) => {
   const userId = req.userId;
   const image = req.file;
 
@@ -267,7 +274,9 @@ const postProfileImage = async (req, res, next) => {
       .json({ message: "لطفا عکس پروفایل خود را تعیین کنید" });
   }
 
-  const profile = await UserProfile.findOne({ where: { userId } });
+  const profile = (await UserProfile.findOne({
+    where: { userId },
+  })) as UserProfile;
   if (profile.image) {
     deleteFile(profile.image);
   }
@@ -279,21 +288,29 @@ const postProfileImage = async (req, res, next) => {
     .json({ message: "عکس پروفایل شما با موفقیت تغییر کرد" });
 };
 
-const deleteProfileImage = async (req, res, next) => {
+const deleteProfileImage: CustomRequestHandler = async (req, res, next) => {
   const userId = req.userId;
 
-  const profile = await UserProfile.findOne({ where: { userId } });
-
-  deleteFile(profile.image);
-  profile.image = null;
-  await profile.save();
-  return res.status(200).json({ message: "عکس پروفایل شما با موفقیت حذف شد" });
+  const profile = (await UserProfile.findOne({
+    where: { userId },
+  })) as UserProfile;
+  if (profile.image) {
+    deleteFile(profile.image);
+    profile.image = null;
+    await profile.save();
+    return res
+      .status(200)
+      .json({ message: "عکس پروفایل شما با موفقیت حذف شد" });
+  }
+  return res.status(400).json({ message: "شما عکس پروفایلی ندارید" });
 };
 
-const postProfile = async (req, res, next) => {
+const postProfile: CustomRequestHandler = async (req, res, next) => {
   const { bio, age, skills, experiences, gender } = req.body;
 
-  const profile = await UserProfile.findOne({ where: { userId: req.userId } });
+  const profile = (await UserProfile.findOne({
+    where: { userId: req.userId },
+  })) as UserProfile;
 
   if (typeof bio !== "undefined") {
     if (bio === "") {
@@ -307,7 +324,7 @@ const postProfile = async (req, res, next) => {
     if (age === "") {
       profile.age = null;
     } else {
-      profile.age = age;
+      profile.age = +age || null;
     }
   }
 
@@ -340,7 +357,7 @@ const postProfile = async (req, res, next) => {
   return res.status(200).json({ message: "اطلاعات شما با موفقیت ویرایش شد" });
 };
 
-const postProfileNewPassword = async (req, res, next) => {
+const postProfileNewPassword: CustomRequestHandler = async (req, res, next) => {
   const { password, confirm_password, new_password } = req.body;
 
   const errors = validationResult(req);
@@ -349,9 +366,9 @@ const postProfileNewPassword = async (req, res, next) => {
   }
 
   const userId = req.userId;
-  const user = await User.findOne({ where: { id: userId } });
+  const user = (await User.findOne({ where: { id: userId } })) as User;
 
-  bcrypt.hash(new_password, 12, async (err, hash) => {
+  bcrypt.hash(new_password, 12, async (err, hash: string) => {
     if (err) {
       return res
         .status(500)
@@ -359,20 +376,31 @@ const postProfileNewPassword = async (req, res, next) => {
     }
 
     user.password = hash;
-    await user.save()
-    return res.status(200).json({message:"رمز عبور شما با موفقیت تغییر کرد"})
+    await user.save();
+    return res
+      .status(200)
+      .json({ message: "رمز عبور شما با موفقیت تغییر کرد" });
   });
 };
 
-module.exports.postRegister = postRegister;
-module.exports.postRegisterActivation = postRegisterActivation;
-module.exports.postLogin = postLogin;
-module.exports.postRefresh = postRefresh;
-module.exports.postResetPassword = postResetPassword;
-module.exports.postResetPasswordNew = postResetPasswordNew;
-module.exports.postResendEmailActivationCode = postResendEmailActivationCode;
-module.exports.getProfile = getProfile;
-module.exports.postProfileImage = postProfileImage;
-module.exports.deleteProfileImage = deleteProfileImage;
-module.exports.postProfile = postProfile;
-module.exports.postProfileNewPassword = postProfileNewPassword;
+export const wrappedPostRegister = wrapperRequestHandler(postRegister);
+export const wrappedPostRegisterActivation = wrapperRequestHandler(
+  postRegisterActivation
+);
+export const wrappedPostLogin = wrapperRequestHandler(postLogin);
+export const wrappedPostRefresh = wrapperRequestHandler(postRefresh);
+export const wrappedPostResetPassword =
+  wrapperRequestHandler(postResetPassword);
+export const wrappedPostResetPasswordNew =
+  wrapperRequestHandler(postResetPasswordNew);
+export const wrappedPostResendEmailActivationCode = wrapperRequestHandler(
+  postResendEmailActivationCode
+);
+export const wrappedGetProfile = wrapperRequestHandler(getProfile);
+export const wrappedPostProfile = wrapperRequestHandler(postProfile);
+export const wrappedPostProfileImage = wrapperRequestHandler(postProfileImage);
+export const wrappedDeleteProfileImage =
+  wrapperRequestHandler(deleteProfileImage);
+export const wrappedPostProfileNewPassword = wrapperRequestHandler(
+  postProfileNewPassword
+);
