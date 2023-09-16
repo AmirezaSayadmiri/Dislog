@@ -1,6 +1,7 @@
 import { RequestHandler } from "express";
 import jwt from "jsonwebtoken";
 import { CustomRequestHandler, wrapperRequestHandler } from "../types/types";
+import User from "../models/User";
 
 const isAuthMiddleWare: CustomRequestHandler = async (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
@@ -10,8 +11,12 @@ const isAuthMiddleWare: CustomRequestHandler = async (req, res, next) => {
         userId: number;
       };
       if (decodedToken) {
-        req.userId = decodedToken.userId;
-        return next();
+        const user = await User.findOne({ where: { id: decodedToken.userId } });
+        if (user) {
+          req.userId = decodedToken.userId;
+          return next();
+        }
+        return res.status(401).json({ message: "unauthorizated" });
       }
       return res.status(401).json({ message: "unauthorizated" });
     } catch (err) {

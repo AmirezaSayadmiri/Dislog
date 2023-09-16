@@ -8,6 +8,9 @@ import headersMiddleWare from "./middlewares/headersMiddleWare";
 import path from "path";
 import userRoutes from "./routes/userRoutes";
 import { CustomRequestHandler } from "./types/types";
+import Question from "./models/Question";
+import Category from "./models/Category";
+
 const app = express();
 
 app.use(express.json());
@@ -22,10 +25,23 @@ app.use(headersMiddleWare);
 app.use(userRoutes);
 
 app.use((req, res, next) => {
-  return res.status(401).json({ message: "notfound" });
+  return res.status(404).json({ message: "notfound" });
 });
 
+// Relations
 UserProfile.belongsTo(User, { foreignKey: "userId", onDelete: "CASCADE" });
+UserProfile.belongsToMany(UserProfile, {
+  as: "Following",
+  through: "UserProfileUserProfile",
+  foreignKey: "userId",
+});
+UserProfile.belongsToMany(UserProfile, {
+  as: "Follower",
+  through: "UserProfileUserProfile",
+  foreignKey: "followingUserId",
+});
+User.hasMany(Question, { foreignKey: "userId", onDelete: "CASCADE" });
+Category.hasMany(Question, { foreignKey: "categoryId", onDelete: "CASCADE" });
 
 sequelize
   .sync({ force: false })

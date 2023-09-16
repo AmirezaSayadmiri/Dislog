@@ -1,5 +1,5 @@
 import express from "express";
-import { body } from "express-validator";
+import { body, param } from "express-validator";
 import bcrypt from "bcryptjs";
 import User from "../models/User";
 
@@ -15,6 +15,8 @@ import isGuestMiddleWare from "../middlewares/isGuestMiddleWare";
 import {
   wrappedDeleteProfileImage,
   wrappedGetProfile,
+  wrappedGetUser,
+  wrappedPostFollowUser,
   wrappedPostLogin,
   wrappedPostProfile,
   wrappedPostProfileImage,
@@ -25,6 +27,7 @@ import {
   wrappedPostResendEmailActivationCode,
   wrappedPostResetPassword,
   wrappedPostResetPasswordNew,
+  wrappedPostUnFollowUser,
 } from "../controllers/userController";
 
 const router = express.Router();
@@ -43,7 +46,7 @@ router.post(
     .withMessage("ایمیل وارد شده معتبر نیست")
     .custom(async (value) => {
       const user = await User.findOne({ where: { email: value } });
-      if (user) {
+      if (user && user.is_active) {
         throw new Error("ایمیل وارد شده از قبل وجود دارد");
       }
     }),
@@ -154,7 +157,7 @@ router.post(
     .withMessage("لطفا رمز عبور فعلی خود را وارد کنید")
     .custom(async (value, { req }) => {
       const userId = req.userId;
-      const user = await User.findOne({ where: { id: userId } }) as User;
+      const user = (await User.findOne({ where: { id: userId } })) as User;
       const result = bcrypt.compareSync(value, user.password!);
       if (!result) {
         throw new Error("رمز عبور فعلی شما اشتباه است");
@@ -173,5 +176,9 @@ router.post(
     }),
   wrappedPostProfileNewPassword
 );
+
+router.get("/users/:username", wrappedGetUser);
+router.post("/users/:username/follow", isAuthMiddleWare, wrappedPostFollowUser);
+router.post("/users/:username/unfollow", isAuthMiddleWare, wrappedPostUnFollowUser);
 
 export default router;

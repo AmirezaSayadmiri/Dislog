@@ -7,17 +7,8 @@ import {
   InferCreationAttributes,
 } from "sequelize";
 import sequelize from "../database";
+import { v4 } from "uuid";
 
-// type UserAttributes ={
-//   id:number,
-//   email:string,
-//   username:string,
-//   password:string,
-//   activation_code:string,
-//   reset_password_token:string,
-//   role:string,
-//   is_active:boolean
-// }
 
 class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
   declare id: number | null;
@@ -45,7 +36,7 @@ User.init(
     },
     username: {
       type: DataTypes.STRING,
-      defaultValue: `user${new Date().getTime().toString().slice(7)}`,
+      defaultValue: `user${v4()}`,
       unique: true,
       allowNull: false,
     },

@@ -94,11 +94,11 @@ const postLogin: CustomRequestHandler = async (req, res, next) => {
     return res.status(400).json(errors);
   }
 
-  const user = await User.findOne({
+  const user = (await User.findOne({
     where: {
       [Op.or]: [{ email: email_username }, { username: email_username }],
     },
-  }) as User;
+  })) as User;
 
   if (!user) {
     return res.status(400).json({ message: "اطلاعات وارد شده اشتباه است" });
@@ -115,12 +115,12 @@ const postLogin: CustomRequestHandler = async (req, res, next) => {
     if (!result) {
       return res.status(400).json({ message: "اطلاعات وارد شده اشتباه است" });
     }
-    const accessToken = await jwt.sign(
+    const accessToken = jwt.sign(
       { email: user.email, userId: user.id },
       SECRET_KEY,
       { expiresIn: "10m" }
     );
-    const refreshToken = await jwt.sign(
+    const refreshToken = jwt.sign(
       { email: user.email, userId: user.id },
       SECRET_KEY,
       { expiresIn: "1d" }
@@ -140,7 +140,7 @@ const postRefresh: CustomRequestHandler = (req, res, next) => {
     return res.status(400).json({ message: "unvalid refresh token" });
   }
 
-  jwt.verify(refresh, SECRET_KEY, (err:any, info:any) => {
+  jwt.verify(refresh, SECRET_KEY, (err: any, info: any) => {
     if (err) {
       return res.status(401).json({ message: "ex" });
     }
@@ -383,6 +383,81 @@ const postProfileNewPassword: CustomRequestHandler = async (req, res, next) => {
   });
 };
 
+const getUser: CustomRequestHandler = async (req, res, next) => {
+  const username = req.params.username;
+
+  const targetUser = await User.findOne({ where: { username } });
+  if (!targetUser) {
+    return next();
+  }
+
+  const targetProfile = (await UserProfile.findOne({
+    where: { userId: targetUser.id },
+    include: { model: UserProfile, as: "Follower" },
+  })) as UserProfile;
+
+  return res.status(200).json({
+    user: targetUser,
+    profile: targetProfile,
+  });
+};
+
+const postFollowUser: CustomRequestHandler = async (req, res, next) => {
+  const username = req.params.username;
+
+  const targetUser = await User.findOne({ where: { username } });
+
+  if (!targetUser || !targetUser.is_active) {
+    return next();
+  }
+
+  const targetUserProfile = (await UserProfile.findOne({
+    where: { userId: targetUser.id },
+  })) as UserProfile;
+  const profile = (await UserProfile.findOne({
+    where: { userId: req.userId },
+  })) as UserProfile;
+
+  const hasFollowed = await profile.hasFollowing(targetUserProfile);
+
+  if (!hasFollowed) {
+    await profile.addFollowing(targetUserProfile!);
+    return res.status(200).json({ message: "کاربر مورد نظر دنبال شد" });
+  }
+  return res
+    .status(400)
+    .json({ message: "شما قبلا کاربر مورد نظر را دنبال کرده اید" });
+};
+
+const postUnFollowUser: CustomRequestHandler = async (req, res, next) => {
+  const username = req.params.username;
+
+  const targetUser = await User.findOne({ where: { username } });
+
+  if (!targetUser || !targetUser.is_active) {
+    return next();
+  }
+
+  const targetUserProfile = (await UserProfile.findOne({
+    where: { userId: targetUser.id },
+  })) as UserProfile;
+  const profile = (await UserProfile.findOne({
+    where: { userId: req.userId },
+  })) as UserProfile;
+
+  const hasFollowed = await profile.hasFollowing(targetUserProfile);
+
+  if (hasFollowed) {
+    await profile.removeFollowing(targetUserProfile!);
+    return res
+      .status(200)
+      .json({ message: "کاربر مورد نظر با موفقیت آنفالو شد" });
+  }
+  return res
+    .status(400)
+    .json({ message: "شما هنوز کاربر مورد نظر را دنبال نکردید" });
+};
+
 export const wrappedPostRegister = wrapperRequestHandler(postRegister);
 export const wrappedPostRegisterActivation = wrapperRequestHandler(
   postRegisterActivation
@@ -404,3 +479,7 @@ export const wrappedDeleteProfileImage =
 export const wrappedPostProfileNewPassword = wrapperRequestHandler(
   postProfileNewPassword
 );
+
+export const wrappedGetUser = wrapperRequestHandler(getUser);
+export const wrappedPostFollowUser = wrapperRequestHandler(postFollowUser);
+export const wrappedPostUnFollowUser = wrapperRequestHandler(postUnFollowUser);

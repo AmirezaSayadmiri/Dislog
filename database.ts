@@ -1,9 +1,18 @@
 import { Sequelize } from "sequelize";
 
-const sequelize = new Sequelize("dislog", "root", "as84", {
-  dialect: "mysql",
-  host: "localhost",
-  logging: false,
-});
+import dotenv from "dotenv";
+import path from "path";
+dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
+
+const sequelize = new Sequelize(
+  process.env.DB_NAME!,
+  process.env.DB_USER!,
+  process.env.DB_PASSWORD!,
+  {
+    dialect: "mysql",
+    host: process.env.DB_HOST!,
+    logging: false,
+  }
+);
 
 export default sequelize;
