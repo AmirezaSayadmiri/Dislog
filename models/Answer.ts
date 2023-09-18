@@ -9,21 +9,30 @@ import {
     Model,
 } from "sequelize";
 import sequelize from "../database";
+import Question from "./Question";
 import User from "./User";
 
-class Question extends Model<InferAttributes<Question>, InferCreationAttributes<Question>> {
+class Answer extends Model<InferAttributes<Answer>, InferCreationAttributes<Answer>> {
     declare id: number | null;
-    declare title: string | null;
     declare body: string | null;
     declare image: string | null;
     declare likes: number | null;
     declare dislikes: number | null;
-    declare views: number | null;
-    declare slug: string | null;
     declare UserId?: number | null;
-    declare categoryId?: number | null;
+    declare QuestionId?: number | null;
+    declare is_selected: boolean | null;
 
     // associations
+    declare getQuestion: HasManyGetAssociationsMixin<Question>;
+    declare addQuestion: HasManyAddAssociationMixin<Question, number>;
+    declare hasQuestion: HasManyHasAssociationMixin<Question, number>;
+    declare removeQuestion: HasManyRemoveAssociationMixin<Question, number>;
+
+    declare getUser: HasManyGetAssociationsMixin<User>;
+    declare addUser: HasManyAddAssociationMixin<User, number>;
+    declare hasUser: HasManyHasAssociationMixin<User, number>;
+    declare removeUser: HasManyRemoveAssociationMixin<User, number>;
+
     declare getUlike: HasManyGetAssociationsMixin<User>;
     declare addUlike: HasManyAddAssociationMixin<User, number>;
     declare hasUlike: HasManyHasAssociationMixin<User, number>;
@@ -33,30 +42,15 @@ class Question extends Model<InferAttributes<Question>, InferCreationAttributes<
     declare addUDlike: HasManyAddAssociationMixin<User, number>;
     declare hasUDlike: HasManyHasAssociationMixin<User, number>;
     declare removeUDlike: HasManyRemoveAssociationMixin<User, number>;
-
-    declare getUview: HasManyGetAssociationsMixin<User>;
-    declare addUview: HasManyAddAssociationMixin<User, number>;
-    declare hasUview: HasManyHasAssociationMixin<User, number>;
-    declare removeUview: HasManyRemoveAssociationMixin<User, number>;
-
-    declare getUser: HasManyGetAssociationsMixin<User>;
-    declare addUser: HasManyAddAssociationMixin<User, number>;
-    declare hasUser: HasManyHasAssociationMixin<User, number>;
-    declare removeUser: HasManyRemoveAssociationMixin<User, number>;
 }
 
-Question.init(
+Answer.init(
     {
         id: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
             allowNull: false,
-        },
-        title: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            unique: true,
         },
         body: {
             type: DataTypes.STRING,
@@ -65,6 +59,10 @@ Question.init(
         image: {
             type: DataTypes.STRING,
             allowNull: true,
+        },
+        is_selected: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
         },
         likes: {
             type: DataTypes.INTEGER,
@@ -76,17 +74,8 @@ Question.init(
             allowNull: false,
             defaultValue: 0,
         },
-        views: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            defaultValue: 0,
-        },
-        slug: {
-            type: DataTypes.STRING,
-            allowNull: true,
-        },
     },
-    { sequelize, modelName: "Question", timestamps: true }
+    { sequelize, timestamps: true }
 );
 
-export default Question;
+export default Answer;

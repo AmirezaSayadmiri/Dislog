@@ -39,7 +39,13 @@ class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
     declare addQview: HasManyAddAssociationMixin<Question, number>;
     declare hasQview: HasManyHasAssociationMixin<Question, number>;
     declare removeQview: HasManyRemoveAssociationMixin<Question, number>;
+
+    declare getQuestions: HasManyGetAssociationsMixin<Question>;
+    declare addQuestion: HasManyAddAssociationMixin<Question, number>;
+    declare hasQuestion: HasManyHasAssociationMixin<Question, number>;
+    declare removeQuestion: HasManyRemoveAssociationMixin<Question, number>;
 }
+
 
 User.init(
     {

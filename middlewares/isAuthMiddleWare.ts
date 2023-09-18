@@ -20,6 +20,7 @@ const isAuthMiddleWare: CustomRequestHandler = async (req, res, next) => {
             }
             return res.status(401).json({ message: "unauthorizated" });
         } catch (err) {
+            console.log(err)
             return res.status(401).json({ message: "unauthorizated" });
         }
     }

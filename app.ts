@@ -8,9 +8,11 @@ import headersMiddleWare from "./middlewares/headersMiddleWare";
 import path from "path";
 import userRoutes from "./routes/userRoutes";
 import questionRoutes from "./routes/questionRoutes";
+import answerRoutes from "./routes/answerRoutes";
 import { CustomRequestHandler } from "./types/types";
 import Question from "./models/Question";
 import Category from "./models/Category";
+import Answer from "./models/Answer";
 
 const app = express();
 
@@ -25,6 +27,7 @@ app.use(headersMiddleWare);
 // routes
 app.use(userRoutes);
 app.use(questionRoutes);
+app.use(answerRoutes)
 
 app.use((req, res, next) => {
     return res.status(404).json({ message: "notfound" });
@@ -42,7 +45,8 @@ UserProfile.belongsToMany(UserProfile, {
     through: "UserProfileUserProfile",
     foreignKey: "followingUserId",
 });
-User.hasMany(Question, { foreignKey: "userId", onDelete: "CASCADE" });
+User.hasMany(Question);
+Question.belongsTo(User);
 Category.hasMany(Question, { foreignKey: "categoryId", onDelete: "CASCADE" });
 Question.belongsToMany(User, {
     as: "Ulike",
@@ -76,6 +80,34 @@ User.belongsToMany(Question, {
     through: "UserQuestionView",
     foreignKey: "userId",
 });
+
+Question.hasMany(Answer)
+Answer.belongsTo(Question)
+User.hasMany(Answer)
+Answer.belongsTo(User)
+
+Answer.belongsToMany(User, {
+    as: "Ulike",
+    through: "UserAnswerLike",
+    foreignKey: "answerId",
+});
+User.belongsToMany(Question, {
+    as: "Alike",
+    through: "UserAnswerLike",
+    foreignKey: "userId",
+});
+
+Answer.belongsToMany(User, {
+    as: "UDlike",
+    through: "UserAnswerDisLike",
+    foreignKey: "answerId",
+});
+User.belongsToMany(Question, {
+    as: "ADlike",
+    through: "UserAnswerDisLike",
+    foreignKey: "userId",
+});
+
 
 sequelize
     .sync({ force: false })
