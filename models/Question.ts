@@ -10,6 +10,7 @@ import {
 } from "sequelize";
 import sequelize from "../database";
 import User from "./User";
+import Tag from "./Tag";
 
 class Question extends Model<InferAttributes<Question>, InferCreationAttributes<Question>> {
     declare id: number | null;
@@ -20,8 +21,9 @@ class Question extends Model<InferAttributes<Question>, InferCreationAttributes<
     declare dislikes: number | null;
     declare views: number | null;
     declare slug: string | null;
+    declare is_closed: boolean | null;
     declare UserId?: number | null;
-    declare categoryId?: number | null;
+    declare CategoryId?: number | null;
 
     // associations
     declare getUlike: HasManyGetAssociationsMixin<User>;
@@ -43,6 +45,11 @@ class Question extends Model<InferAttributes<Question>, InferCreationAttributes<
     declare addUser: HasManyAddAssociationMixin<User, number>;
     declare hasUser: HasManyHasAssociationMixin<User, number>;
     declare removeUser: HasManyRemoveAssociationMixin<User, number>;
+
+    declare getTag: HasManyGetAssociationsMixin<Tag>;
+    declare addTag: HasManyAddAssociationMixin<Tag, number>;
+    declare hasTag: HasManyHasAssociationMixin<Tag, number>;
+    declare removeTag: HasManyRemoveAssociationMixin<Tag, number>;
 }
 
 Question.init(
@@ -84,6 +91,10 @@ Question.init(
         slug: {
             type: DataTypes.STRING,
             allowNull: true,
+        },
+        is_closed: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
         },
     },
     { sequelize, modelName: "Question", timestamps: true }

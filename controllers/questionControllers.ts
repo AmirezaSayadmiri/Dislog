@@ -7,11 +7,7 @@ import slugify from "slugify";
 import User from "../models/User";
 import UserProfile from "../models/UserProfile";
 import Answer from "../models/Answer";
-
-const getCategories: CustomRequestHandler = async (req, res, next) => {
-    const categories = await Category.findAll();
-    return res.status(200).json({ categories });
-};
+import Tag from "../models/Tag";
 
 const postQuestion: CustomRequestHandler = async (req, res, next) => {
     const errors = validationResult(req);
@@ -19,10 +15,13 @@ const postQuestion: CustomRequestHandler = async (req, res, next) => {
         return res.status(400).json(errors);
     }
 
-    const { title, body, categoryId } = req.body;
+    const { title, body, CategoryId, tags } = req.body;
 
-    const question = await Question.create({ title, body, UserId: +req.userId!, categoryId });
+    const question = await Question.create({ title, body, UserId: +req.userId!, CategoryId });
     question.slug = question.title!.replaceAll(" ", "-").replaceAll("?", "").replaceAll("؟", "");
+    tags.map(async (tag: number) => {
+        await question.addTag(tag);
+    });
     await question.save();
 
     return res.status(201).json({ message: "سوال شما با موفقیت ثبت شد", questionId: question.id });
@@ -49,19 +48,25 @@ const postQuestionImage: CustomRequestHandler = async (req, res, next) => {
 };
 
 const getQuestion: CustomRequestHandler = async (req, res, next) => {
-    const slug = req.params.slug;
+    const id = req.params.id;
     const question = await Question.findOne({
-        where: { slug },
-        include: { model: User, as: "User" },
+        where: { id },
+        include: [
+            { model: User, as: "User", include: [{ model: UserProfile, as: "UserProfile" }] },
+            {
+                model: Answer,
+                as: "Answers",
+                include: [{ model: User, as: "User", include: [{ model: UserProfile, as: "UserProfile" }] }],
+            },
+            { model: Category, as: "Category" },
+            { model: Tag, as: "Tag" },
+        ],
     });
     if (!question) {
         return res.status(404).json({ message: "notfound" });
     }
 
-    const profile = await UserProfile.findOne({ where: { userId: question!.UserId } });
-    const answers = await Answer.findAll({ where: { QuestionId: question.id } });
-    
-    return res.status(200).json({ question, profile, answers });
+    return res.status(200).json({ question });
 };
 
 const postQuestionView: CustomRequestHandler = async (req, res, next) => {
@@ -132,20 +137,39 @@ const postQuestionDislike: CustomRequestHandler = async (req, res, next) => {
     return res.status(200).json({ message: "سوال مورد نظر دیسلایک شد" });
 };
 
+const postQuestionClose: CustomRequestHandler = async (req, res, next) => {
+    const id = req.params.id;
+
+    const question = (await Question.findByPk(id)) as Question;
+
+    if (!question) {
+        return res.status(404).json({ message: "notfound" });
+    }
+
+    question.is_closed = true;
+    await question.save();
+
+    return res.status(200).json({ message: "سوال مورد نظر بسته شد" });
+};
+
+const getFilteredQuestion:CustomRequestHandler = (req, res, next) => {};
+
 const wrappedPostQuestion = wrapperRequestHandler(postQuestion);
-const wrappedGetCategories = wrapperRequestHandler(getCategories);
 const wrappedPostQuestionImage = wrapperRequestHandler(postQuestionImage);
 const wrappedGetQuestion = wrapperRequestHandler(getQuestion);
 const wrappedPostQuestionView = wrapperRequestHandler(postQuestionView);
 const wrappedPostQuestionLike = wrapperRequestHandler(postQuestionLike);
 const wrappedPostQuestionDislike = wrapperRequestHandler(postQuestionDislike);
+const wrappedPostQuestionClose = wrapperRequestHandler(postQuestionClose);
+const wrappedGetFilteredQuestion = wrapperRequestHandler(getFilteredQuestion);
 
 export {
     wrappedPostQuestion,
-    wrappedGetCategories,
     wrappedPostQuestionImage,
     wrappedGetQuestion,
     wrappedPostQuestionDislike,
     wrappedPostQuestionView,
     wrappedPostQuestionLike,
+    wrappedPostQuestionClose,
+    wrappedGetFilteredQuestion
 };

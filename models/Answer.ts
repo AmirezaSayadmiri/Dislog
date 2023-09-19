@@ -21,6 +21,7 @@ class Answer extends Model<InferAttributes<Answer>, InferCreationAttributes<Answ
     declare UserId?: number | null;
     declare QuestionId?: number | null;
     declare is_selected: boolean | null;
+    declare Question?: Question | null;
 
     // associations
     declare getQuestion: HasManyGetAssociationsMixin<Question>;

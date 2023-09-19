@@ -9,10 +9,12 @@ import path from "path";
 import userRoutes from "./routes/userRoutes";
 import questionRoutes from "./routes/questionRoutes";
 import answerRoutes from "./routes/answerRoutes";
-import { CustomRequestHandler } from "./types/types";
+import categoryRoutes from "./routes/categoryRoutes";
+import tagRoutes from "./routes/tagRoutes";
 import Question from "./models/Question";
 import Category from "./models/Category";
 import Answer from "./models/Answer";
+import Tag from "./models/Tag";
 
 const app = express();
 
@@ -20,6 +22,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/images/users/profile-images", express.static(path.join(__dirname, "..", "/images/users/profile-images")));
 app.use("/images/questions", express.static(path.join(__dirname, "..", "/images/questions")));
+app.use("/images/answers", express.static(path.join(__dirname, "..", "/images/answers")));
 
 // middlewares
 app.use(headersMiddleWare);
@@ -27,14 +30,18 @@ app.use(headersMiddleWare);
 // routes
 app.use(userRoutes);
 app.use(questionRoutes);
-app.use(answerRoutes)
+app.use(answerRoutes);
+app.use(categoryRoutes);
+app.use(tagRoutes);
 
 app.use((req, res, next) => {
     return res.status(404).json({ message: "notfound" });
 });
 
 // relations
-UserProfile.belongsTo(User, { foreignKey: "userId", onDelete: "CASCADE" });
+UserProfile.belongsTo(User, { onDelete: "CASCADE", foreignKey: { allowNull: false } });
+User.hasOne(UserProfile);
+
 UserProfile.belongsToMany(UserProfile, {
     as: "Following",
     through: "UserProfileUserProfile",
@@ -45,9 +52,13 @@ UserProfile.belongsToMany(UserProfile, {
     through: "UserProfileUserProfile",
     foreignKey: "followingUserId",
 });
-User.hasMany(Question);
+
+User.hasMany(Question, { foreignKey: { allowNull: false } });
 Question.belongsTo(User);
-Category.hasMany(Question, { foreignKey: "categoryId", onDelete: "CASCADE" });
+
+Category.hasMany(Question, { onDelete: "CASCADE", foreignKey: { allowNull: false } });
+Question.belongsTo(Category);
+
 Question.belongsToMany(User, {
     as: "Ulike",
     through: "UserQuestionLike",
@@ -81,17 +92,18 @@ User.belongsToMany(Question, {
     foreignKey: "userId",
 });
 
-Question.hasMany(Answer)
-Answer.belongsTo(Question)
-User.hasMany(Answer)
-Answer.belongsTo(User)
+Question.hasMany(Answer, { foreignKey: { allowNull: false } });
+Answer.belongsTo(Question);
+
+User.hasMany(Answer, { foreignKey: { allowNull: false } });
+Answer.belongsTo(User);
 
 Answer.belongsToMany(User, {
     as: "Ulike",
     through: "UserAnswerLike",
     foreignKey: "answerId",
 });
-User.belongsToMany(Question, {
+User.belongsToMany(Answer, {
     as: "Alike",
     through: "UserAnswerLike",
     foreignKey: "userId",
@@ -102,12 +114,14 @@ Answer.belongsToMany(User, {
     through: "UserAnswerDisLike",
     foreignKey: "answerId",
 });
-User.belongsToMany(Question, {
+User.belongsToMany(Answer, {
     as: "ADlike",
     through: "UserAnswerDisLike",
     foreignKey: "userId",
 });
 
+Tag.belongsToMany(Question, { through: "QuestionTag", as: "Question", foreignKey: "tagId" });
+Question.belongsToMany(Tag, { through: "QuestionTag", as: "Tag", foreignKey: "questionId" });
 
 sequelize
     .sync({ force: false })

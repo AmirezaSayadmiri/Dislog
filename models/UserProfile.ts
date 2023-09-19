@@ -20,7 +20,7 @@ class UserProfile extends Model<InferAttributes<UserProfile>, InferCreationAttri
     declare image: string | null;
     declare age: number | null;
     declare score: number | null;
-    declare userId?: number | null;
+    declare UserId?: number | null;
 
     // associations
     declare getFollower: HasManyGetAssociationsMixin<UserProfile>;
@@ -67,7 +67,7 @@ UserProfile.init(
             allowNull: true,
         },
         score: {
-            type: DataTypes.STRING,
+            type: DataTypes.INTEGER,
             allowNull: true,
             defaultValue: 0,
         },

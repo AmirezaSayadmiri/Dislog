@@ -35,7 +35,7 @@ const postRegister: CustomRequestHandler = async (req, res, next) => {
             user.password = hash;
             await user.save();
         });
-        await UserProfile.create({ userId: user.id });
+        await UserProfile.create({ UserId: user.id });
         const result = await sendEmail(
             email,
             "فعالسازی حساب کاربری دیسلاگ",
@@ -61,7 +61,7 @@ const postRegisterActivation: CustomRequestHandler = async (req, res, next) => {
                 user.activation_code = null;
                 user.is_active = true;
                 await user.save();
-                const accessToken = jwt.sign({ email: user.email, userId: user.id }, SECRET_KEY, { expiresIn: "2min" });
+                const accessToken = jwt.sign({ email: user.email, userId: user.id }, SECRET_KEY, { expiresIn: "10m" });
                 const refreshToken = jwt.sign({ email: user.email, userId: user.id }, SECRET_KEY, { expiresIn: "1d" });
                 return res.status(200).json({
                     userId: user.id,
@@ -219,7 +219,7 @@ const postResendEmailActivationCode: CustomRequestHandler = async (req, res, nex
 const getProfile: CustomRequestHandler = async (req, res, next) => {
     const user = (await User.findOne({ where: { id: req.userId } })) as User;
     const profile = (await UserProfile.findOne({
-        where: { userId: user.id },
+        where: { UserId: user.id },
     })) as UserProfile;
     if (user && profile) {
         return res.status(200).json({
@@ -239,7 +239,7 @@ const postProfileImage: CustomRequestHandler = async (req, res, next) => {
     }
 
     const profile = (await UserProfile.findOne({
-        where: { userId },
+        where: { UserId:userId },
     })) as UserProfile;
     if (profile.image) {
         deleteFile(profile.image);
@@ -254,7 +254,7 @@ const deleteProfileImage: CustomRequestHandler = async (req, res, next) => {
     const userId = req.userId;
 
     const profile = (await UserProfile.findOne({
-        where: { userId },
+        where: { UserId:userId },
     })) as UserProfile;
     if (profile.image) {
         deleteFile(profile.image);
@@ -269,7 +269,7 @@ const postProfile: CustomRequestHandler = async (req, res, next) => {
     const { bio, age, skills, experiences, gender } = req.body;
 
     const profile = (await UserProfile.findOne({
-        where: { userId: req.userId },
+        where: { UserId: req.userId },
     })) as UserProfile;
 
     if (typeof bio !== "undefined") {
@@ -348,7 +348,7 @@ const getUser: CustomRequestHandler = async (req, res, next) => {
     }
 
     const targetProfile = (await UserProfile.findOne({
-        where: { userId: targetUser.id },
+        where: { UserId: targetUser.id },
         include: { model: UserProfile, as: "Follower" },
     })) as UserProfile;
 
@@ -368,10 +368,10 @@ const postFollowUser: CustomRequestHandler = async (req, res, next) => {
     }
 
     const targetUserProfile = (await UserProfile.findOne({
-        where: { userId: targetUser.id },
+        where: { UserId: targetUser.id },
     })) as UserProfile;
     const profile = (await UserProfile.findOne({
-        where: { userId: req.userId },
+        where: { UserId: req.userId },
     })) as UserProfile;
 
     const hasFollowed = await profile.hasFollowing(targetUserProfile);
@@ -393,10 +393,10 @@ const postUnFollowUser: CustomRequestHandler = async (req, res, next) => {
     }
 
     const targetUserProfile = (await UserProfile.findOne({
-        where: { userId: targetUser.id },
+        where: { UserId: targetUser.id },
     })) as UserProfile;
     const profile = (await UserProfile.findOne({
-        where: { userId: req.userId },
+        where: { UserId: req.userId },
     })) as UserProfile;
 
     const hasFollowed = await profile.hasFollowing(targetUserProfile);
