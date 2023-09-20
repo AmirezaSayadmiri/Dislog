@@ -8,6 +8,7 @@ import User from "../models/User";
 import UserProfile from "../models/UserProfile";
 import Answer from "../models/Answer";
 import Tag from "../models/Tag";
+import { Op } from "sequelize";
 
 const postQuestion: CustomRequestHandler = async (req, res, next) => {
     const errors = validationResult(req);
@@ -152,7 +153,111 @@ const postQuestionClose: CustomRequestHandler = async (req, res, next) => {
     return res.status(200).json({ message: "سوال مورد نظر بسته شد" });
 };
 
-const getFilteredQuestion:CustomRequestHandler = (req, res, next) => {};
+const getLatestQuestions: CustomRequestHandler = async (req, res, next) => {
+    const questions = await Question.findAll({
+        limit: 8,
+        order: [["createdAt", "DESC"]],
+        include: { model: User, as: "User", include: [{ model: UserProfile, as: "UserProfile" }] },
+    });
+
+    return res.status(200).json({ questions });
+};
+
+const getFilteredQuestions: CustomRequestHandler = async (req, res, next) => {
+    const { q, categories, page } = req.query;
+
+    let options: any = {
+        offset: 0,
+        limit: 5,
+        include: { model: User, as: "User", include: [{ model: UserProfile, as: "UserProfile" }] },
+        order: [["createdAt", "DESC"]],
+        where: {},
+    };
+
+    if (q) {
+        options = {
+            ...options,
+            where: {
+                ...options.where,
+                [Op.or]: [
+                    {
+                        title: {
+                            [Op.like]: `%${q}%`,
+                        },
+                    },
+                    {
+                        body: {
+                            [Op.like]: `%${q}%`,
+                        },
+                    },
+                ],
+            },
+        };
+    }
+
+    if (Array.isArray(categories)) {
+        let isValidCategories = true;
+
+        const validateCategories = async () => {
+            categories.map(async (category) => {
+                const cat = await Category.findByPk(+category);
+                if (!cat) {
+                    isValidCategories = false;
+                }
+            });
+        };
+
+        await validateCategories();
+
+        if (!isValidCategories) {
+            return next();
+        }
+
+        options = {
+            ...options,
+            where: {
+                ...options.where,
+                CategoryId: {
+                    [Op.in]: categories,
+                },
+            },
+        };
+    } else if (categories) {
+        const category = await Category.findByPk(+categories);
+
+        if (!category) {
+            return next();
+        }
+
+        options = {
+            ...options,
+            where: {
+                ...options.where,
+                CategoryId: categories,
+            },
+        };
+    }
+
+    const count = await Question.count({ where: options.where });
+    if (page && Number.isInteger(+page) && +page > 0) {
+        if (+page !== 1) {
+            const hasEnoughData = (+page - 1) * 5 + 1 <= count;
+
+            if (!hasEnoughData) {
+                return next();
+            }
+
+            options = {
+                ...options,
+                limit: 5,
+                offset: (+page - 1) * 5,
+            };
+        }
+    }
+
+    const questions = await Question.findAll(options);
+    return res.status(200).json({ questions, count });
+};
 
 const wrappedPostQuestion = wrapperRequestHandler(postQuestion);
 const wrappedPostQuestionImage = wrapperRequestHandler(postQuestionImage);
@@ -161,7 +266,8 @@ const wrappedPostQuestionView = wrapperRequestHandler(postQuestionView);
 const wrappedPostQuestionLike = wrapperRequestHandler(postQuestionLike);
 const wrappedPostQuestionDislike = wrapperRequestHandler(postQuestionDislike);
 const wrappedPostQuestionClose = wrapperRequestHandler(postQuestionClose);
-const wrappedGetFilteredQuestion = wrapperRequestHandler(getFilteredQuestion);
+const wrappedGetFilteredQuestions = wrapperRequestHandler(getFilteredQuestions);
+const wrappedGetLatestQuestions = wrapperRequestHandler(getLatestQuestions);
 
 export {
     wrappedPostQuestion,
@@ -171,5 +277,6 @@ export {
     wrappedPostQuestionView,
     wrappedPostQuestionLike,
     wrappedPostQuestionClose,
-    wrappedGetFilteredQuestion
+    wrappedGetFilteredQuestions,
+    wrappedGetLatestQuestions,
 };

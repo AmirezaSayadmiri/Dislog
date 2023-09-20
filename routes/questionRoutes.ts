@@ -1,7 +1,8 @@
 import express from "express";
 import isAuthMiddleWare from "../middlewares/isAuthMiddleWare";
 import {
-    wrappedGetFilteredQuestion,
+    wrappedGetFilteredQuestions,
+    wrappedGetLatestQuestions,
     wrappedGetQuestion,
     wrappedPostQuestion,
     wrappedPostQuestionClose,
@@ -93,6 +94,7 @@ router.post(
     wrappedPostQuestionImage
 );
 
-router.get("/questions/search", wrappedGetFilteredQuestion)
+router.get("/questions/latest", wrappedGetLatestQuestions)
+router.get("/questions", wrappedGetFilteredQuestions)
 
 export default router;
