@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 
 interface CustomRequest extends Request {
     userId: string | number | undefined;
+    isAdmin?: boolean;
 }
 
 type CustomRequestHandler = (req: CustomRequest, res: Response, next: NextFunction) => any;

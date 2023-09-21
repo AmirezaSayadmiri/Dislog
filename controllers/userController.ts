@@ -10,6 +10,7 @@ import fs from "fs";
 import path from "path";
 import deleteFile from "../helpers/deleteFile";
 import { CustomRequestHandler, wrapperRequestHandler } from "../types/types";
+import sequelize from "../database";
 
 const SECRET_KEY = "supersupersecretkey";
 
@@ -239,7 +240,7 @@ const postProfileImage: CustomRequestHandler = async (req, res, next) => {
     }
 
     const profile = (await UserProfile.findOne({
-        where: { UserId:userId },
+        where: { UserId: userId },
     })) as UserProfile;
     if (profile.image) {
         deleteFile(profile.image);
@@ -254,7 +255,7 @@ const deleteProfileImage: CustomRequestHandler = async (req, res, next) => {
     const userId = req.userId;
 
     const profile = (await UserProfile.findOne({
-        where: { UserId:userId },
+        where: { UserId: userId },
     })) as UserProfile;
     if (profile.image) {
         deleteFile(profile.image);
@@ -374,6 +375,10 @@ const postFollowUser: CustomRequestHandler = async (req, res, next) => {
         where: { UserId: req.userId },
     })) as UserProfile;
 
+    if (targetUser.id == req.userId) {
+        return next();
+    }
+
     const hasFollowed = await profile.hasFollowing(targetUserProfile);
 
     if (!hasFollowed) {
@@ -423,6 +428,40 @@ const postProfileChangeUsername: CustomRequestHandler = async (req, res, next) =
     return res.status(200).json({ message: "نام کاربری شما با موفقیت تغییر کرد" });
 };
 
+const getBestUsers: CustomRequestHandler = async (req, res, next) => {
+    const users = await User.findAll({
+        include: [{ model: UserProfile }],
+        order: [[sequelize.literal("UserProfile.score"), "DESC"]],
+        limit: 4,
+    });
+
+    return res.status(200).json({ users });
+};
+
+const getLikedQuestions: CustomRequestHandler = async (req, res, next) => {
+    const user = (await User.findByPk(req.userId)) as User;
+
+    const questions = await user.getQlike({ include: [{ model: User, include: [{ model: UserProfile }] }] });
+
+    return res.status(200).json({ questions });
+};
+
+const getDislikedQuestions: CustomRequestHandler = async (req, res, next) => {
+    const user = (await User.findByPk(req.userId)) as User;
+
+    const questions = await user.getQDlike({ include: [{ model: User, include: [{ model: UserProfile }] }] });
+
+    return res.status(200).json({ questions });
+};
+
+const getViewedQuestions: CustomRequestHandler = async (req, res, next) => {
+    const user = (await User.findByPk(req.userId)) as User;
+
+    const questions = await user.getQview({ include: [{ model: User, include: [{ model: UserProfile }] }] });
+
+    return res.status(200).json({ questions });
+};
+
 export const wrappedPostRegister = wrapperRequestHandler(postRegister);
 export const wrappedPostRegisterActivation = wrapperRequestHandler(postRegisterActivation);
 export const wrappedPostLogin = wrapperRequestHandler(postLogin);
@@ -439,3 +478,7 @@ export const wrappedGetUser = wrapperRequestHandler(getUser);
 export const wrappedPostFollowUser = wrapperRequestHandler(postFollowUser);
 export const wrappedPostUnFollowUser = wrapperRequestHandler(postUnFollowUser);
 export const wrappedPostProfileChangeUsername = wrapperRequestHandler(postProfileChangeUsername);
+export const wrappedGetBestUsers = wrapperRequestHandler(getBestUsers);
+export const wrappedGetLikedQuestions = wrapperRequestHandler(getLikedQuestions);
+export const wrappedGetDislikedQuestions = wrapperRequestHandler(getDislikedQuestions);
+export const wrappedGetViewedQuestions = wrapperRequestHandler(getViewedQuestions);

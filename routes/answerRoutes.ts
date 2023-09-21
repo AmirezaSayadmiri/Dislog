@@ -17,9 +17,10 @@ const router = express.Router();
 router.post(
     "/answers",
     isAuthMiddleWare,
-    body("body").notEmpty().withMessage("لطفا متن جواب خود را وارد کنید"),
+    body("body").trim().notEmpty().withMessage("لطفا متن جواب خود را وارد کنید"),
 
     body("QuestionId")
+        .trim()
         .notEmpty()
         .withMessage("لطفا دسته بندی سوال خود را وارد کنید")
         .custom(async (value) => {

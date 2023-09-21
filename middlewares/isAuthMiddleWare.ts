@@ -14,6 +14,9 @@ const isAuthMiddleWare: CustomRequestHandler = async (req, res, next) => {
                 const user = await User.findOne({ where: { id: decodedToken.userId } });
                 if (user) {
                     req.userId = decodedToken.userId;
+                    if(user.role==="admin"){
+                        req.isAdmin=true;
+                    }
                     return next();
                 }
                 return res.status(401).json({ message: "unauthorizated" });

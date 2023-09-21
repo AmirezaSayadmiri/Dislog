@@ -9,6 +9,7 @@ import UserProfile from "../models/UserProfile";
 import Answer from "../models/Answer";
 import Tag from "../models/Tag";
 import { Op } from "sequelize";
+import deleteFile from "../helpers/deleteFile";
 
 const postQuestion: CustomRequestHandler = async (req, res, next) => {
     const errors = validationResult(req);
@@ -42,11 +43,37 @@ const postQuestionImage: CustomRequestHandler = async (req, res, next) => {
     const questionId = req.params.questionId;
     const question = (await Question.findOne({ where: { id: questionId } })) as Question;
 
+    if(question.image){
+        deleteFile(question.image)
+    }
+
     question.image = image.path;
     await question.save();
 
     return res.status(200).json({ message: "عکس سوال با موفقیت ذخیره شد" });
 };
+
+const deleteQuestionImage: CustomRequestHandler = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json(errors);
+    }
+
+ 
+    const questionId = req.params.questionId;
+    const question = (await Question.findOne({ where: { id: questionId } })) as Question;
+
+    if(question.image){
+        deleteFile(question.image)
+        question.image = null;
+        await question.save();
+    }
+
+
+    return res.status(200).json({ message: "عکس سوال با موفقیت حذف شد" });
+};
+
+
 
 const getQuestion: CustomRequestHandler = async (req, res, next) => {
     const id = req.params.id;
@@ -108,6 +135,10 @@ const postQuestionLike: CustomRequestHandler = async (req, res, next) => {
             question.dislikes = question.dislikes! - 1;
         }
         await question.save();
+    } else {
+        question.likes = question.likes! - 1;
+        await question.save();
+        await question.removeUlike(+req.userId!);
     }
 
     return res.status(200).json({ message: "سوال مورد نظر لایک شد" });
@@ -133,6 +164,10 @@ const postQuestionDislike: CustomRequestHandler = async (req, res, next) => {
             question.likes = question.likes! - 1;
         }
         await question.save();
+    } else {
+        question.dislikes = question.dislikes! - 1;
+        await question.save();
+        await question.removeUDlike(+req.userId!);
     }
 
     return res.status(200).json({ message: "سوال مورد نظر دیسلایک شد" });
@@ -141,7 +176,7 @@ const postQuestionDislike: CustomRequestHandler = async (req, res, next) => {
 const postQuestionClose: CustomRequestHandler = async (req, res, next) => {
     const id = req.params.id;
 
-    const question = (await Question.findByPk(id)) as Question;
+    const question = (await Question.findOne({ where: { id, UserId: req.userId } })) as Question;
 
     if (!question) {
         return res.status(404).json({ message: "notfound" });
@@ -163,13 +198,16 @@ const getLatestQuestions: CustomRequestHandler = async (req, res, next) => {
     return res.status(200).json({ questions });
 };
 
-const getFilteredQuestions: CustomRequestHandler = async (req, res, next) => {
-    const { q, categories, page } = req.query;
+const getQuestions: CustomRequestHandler = async (req, res, next) => {
+    const { q, categories, page, order } = req.query;
 
     let options: any = {
         offset: 0,
         limit: 5,
-        include: { model: User, as: "User", include: [{ model: UserProfile, as: "UserProfile" }] },
+        include: [
+            { model: User, as: "User", include: [{ model: UserProfile, as: "UserProfile" }] },
+            { model: Tag, as: "Tag" },
+        ],
         order: [["createdAt", "DESC"]],
         where: {},
     };
@@ -238,6 +276,36 @@ const getFilteredQuestions: CustomRequestHandler = async (req, res, next) => {
         };
     }
 
+    if (order && order === "dateD") {
+        options = {
+            ...options,
+            order: [["createdAt", "DESC"]],
+        };
+    } else if (order && order === "date") {
+        options = {
+            ...options,
+            order: [["createdAt", "ASC"]],
+        };
+    } else if (order && order === "close") {
+        options = {
+            ...options,
+            order: [["createdAt", "DESC"]],
+            where: {
+                ...options.where,
+                is_closed: true,
+            },
+        };
+    } else if (order && order === "open") {
+        options = {
+            ...options,
+            order: [["createdAt", "DESC"]],
+            where: {
+                ...options.where,
+                is_closed: false,
+            },
+        };
+    }
+
     const count = await Question.count({ where: options.where });
     if (page && Number.isInteger(+page) && +page > 0) {
         if (+page !== 1) {
@@ -259,24 +327,58 @@ const getFilteredQuestions: CustomRequestHandler = async (req, res, next) => {
     return res.status(200).json({ questions, count });
 };
 
-const wrappedPostQuestion = wrapperRequestHandler(postQuestion);
-const wrappedPostQuestionImage = wrapperRequestHandler(postQuestionImage);
-const wrappedGetQuestion = wrapperRequestHandler(getQuestion);
-const wrappedPostQuestionView = wrapperRequestHandler(postQuestionView);
-const wrappedPostQuestionLike = wrapperRequestHandler(postQuestionLike);
-const wrappedPostQuestionDislike = wrapperRequestHandler(postQuestionDislike);
-const wrappedPostQuestionClose = wrapperRequestHandler(postQuestionClose);
-const wrappedGetFilteredQuestions = wrapperRequestHandler(getFilteredQuestions);
-const wrappedGetLatestQuestions = wrapperRequestHandler(getLatestQuestions);
+const putQuestion: CustomRequestHandler = async (req, res, next) => {
+    console.log("first");
+    const { title, body, tags } = req.body;
+    const id = req.params.id;
 
-export {
-    wrappedPostQuestion,
-    wrappedPostQuestionImage,
-    wrappedGetQuestion,
-    wrappedPostQuestionDislike,
-    wrappedPostQuestionView,
-    wrappedPostQuestionLike,
-    wrappedPostQuestionClose,
-    wrappedGetFilteredQuestions,
-    wrappedGetLatestQuestions,
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json(errors);
+    }
+    console.log(id);
+    const question = await Question.findByPk(+id);
+
+    if (!question) {
+        return next();
+    }
+
+    question.title = title;
+    question.body = body;
+    tags.map(async (tag: string) => {
+        const hasTag = await question.hasTag(+tag);
+        if (!hasTag) {
+            await question.addTag(+tag);
+        }
+    });
+    await question.save();
+
+    return res.status(200).json({ message: "پرسش آپدیت شد", questionId: question.id });
 };
+
+const deleteQuestion: CustomRequestHandler = async (req, res, next) => {
+    const id = req.params.id;
+
+    const question = await Question.findByPk(id);
+
+    if (!question) {
+        return next();
+    }
+
+    await question.destroy();
+
+    return res.status(200).json({ message: "پرسش حذف شد" });
+};
+
+export const wrappedPostQuestion = wrapperRequestHandler(postQuestion);
+export const wrappedPostQuestionImage = wrapperRequestHandler(postQuestionImage);
+export const wrappedDeleteQuestionImage = wrapperRequestHandler(deleteQuestionImage);
+export const wrappedGetQuestion = wrapperRequestHandler(getQuestion);
+export const wrappedPostQuestionView = wrapperRequestHandler(postQuestionView);
+export const wrappedPostQuestionLike = wrapperRequestHandler(postQuestionLike);
+export const wrappedPostQuestionDislike = wrapperRequestHandler(postQuestionDislike);
+export const wrappedPostQuestionClose = wrapperRequestHandler(postQuestionClose);
+export const wrappedGetLatestQuestions = wrapperRequestHandler(getLatestQuestions);
+export const wrappedGetQuestions = wrapperRequestHandler(getQuestions);
+export const wrappedPutQuestions = wrapperRequestHandler(putQuestion);
+export const wrappedDeleteQuestion = wrapperRequestHandler(deleteQuestion);

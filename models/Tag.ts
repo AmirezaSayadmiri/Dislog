@@ -1,4 +1,13 @@
-import { DataTypes, HasManyAddAssociationMixin, HasManyGetAssociationsMixin, HasManyHasAssociationMixin, HasManyRemoveAssociationMixin, InferAttributes, InferCreationAttributes, Model } from "sequelize";
+import {
+    DataTypes,
+    HasManyAddAssociationMixin,
+    HasManyGetAssociationsMixin,
+    HasManyHasAssociationMixin,
+    HasManyRemoveAssociationMixin,
+    InferAttributes,
+    InferCreationAttributes,
+    Model,
+} from "sequelize";
 import sequelize from "../database";
 import Question from "./Question";
 
@@ -6,7 +15,6 @@ class Tag extends Model<InferAttributes<Tag>, InferCreationAttributes<Tag>> {
     declare id: number | null;
     declare name: string | null;
     declare slug: string | null;
-
 
     declare getQuestion: HasManyGetAssociationsMixin<Question>;
     declare addQuestion: HasManyAddAssociationMixin<Question, number>;
@@ -25,13 +33,14 @@ Tag.init(
         name: {
             type: DataTypes.STRING,
             allowNull: false,
+            unique: true,
         },
         slug: {
             type: DataTypes.STRING,
             allowNull: true,
         },
     },
-    { sequelize, timestamps: true, modelName:"Tag" }
+    { sequelize, timestamps: true, modelName: "Tag" }
 );
 
 export default Tag;

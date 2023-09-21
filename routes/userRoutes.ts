@@ -2,17 +2,18 @@ import express from "express";
 import { body, param } from "express-validator";
 import bcrypt from "bcryptjs";
 import User from "../models/User";
-
-import { v4 } from "uuid";
-import sendEmail from "../helpers/sendEmail";
 import multer from "multer";
 import { userProfileStorage, userProfileFileFilter } from "../multer/userProfile";
 import isAuthMiddleWare from "../middlewares/isAuthMiddleWare";
 import isGuestMiddleWare from "../middlewares/isGuestMiddleWare";
 import {
     wrappedDeleteProfileImage,
+    wrappedGetBestUsers,
+    wrappedGetDislikedQuestions,
+    wrappedGetLikedQuestions,
     wrappedGetProfile,
     wrappedGetUser,
+    wrappedGetViewedQuestions,
     wrappedPostFollowUser,
     wrappedPostLogin,
     wrappedPostProfile,
@@ -38,6 +39,7 @@ router.post(
     "/register",
     isGuestMiddleWare,
     body("email")
+        .trim()
         .notEmpty()
         .withMessage("لطفا ایمیل خود را وارد کنید")
         .isEmail()
@@ -48,30 +50,32 @@ router.post(
                 throw new Error("ایمیل وارد شده از قبل وجود دارد");
             }
         }),
-    body("password").notEmpty().withMessage("لطفا رمز عبور خود را وارد کنید"),
+    body("password").trim().notEmpty().withMessage("لطفا رمز عبور خود را وارد کنید"),
     body("confirm_password")
+        .trim()
         .notEmpty()
         .withMessage("لطفا تاییدیه رمز عبور خود را وارد کنید")
         .custom(async (value, { req }) => {
             if (value !== req.body.password) {
                 throw new Error("رمز عبور ها مطابقت ندارند");
             }
-        }),
+        })
+        .trim(),
     wrappedPostRegister
 );
 
 router.post(
     "/register/activation",
     isGuestMiddleWare,
-    body("activation_code").notEmpty().withMessage("لطفا کد تایید شده را وارد کنید"),
+    body("activation_code").trim().notEmpty().withMessage("لطفا کد تایید شده را وارد کنید"),
     wrappedPostRegisterActivation
 );
 
 router.post(
     "/login",
     isGuestMiddleWare,
-    body("email_username").notEmpty().withMessage("لطفا نام کاربری یا ایمیل خود را وارد کنید"),
-    body("password").notEmpty().withMessage("لطفا رمز عبور خود را وارد کنید"),
+    body("email_username").trim().notEmpty().withMessage("لطفا نام کاربری یا ایمیل خود را وارد کنید"),
+    body("password").trim().notEmpty().withMessage("لطفا رمز عبور خود را وارد کنید"),
     wrappedPostLogin
 );
 
@@ -81,6 +85,7 @@ router.post(
     "/reset-password",
     isGuestMiddleWare,
     body("email")
+        .trim()
         .notEmpty()
         .withMessage("لطفا ایمیل خود را وارد کنید")
         .isEmail()
@@ -97,8 +102,9 @@ router.post(
 router.post(
     "/reset-password/new",
     isGuestMiddleWare,
-    body("password").notEmpty().withMessage("لطفا رمز عبور جدید را وارد کنید"),
+    body("password").trim().notEmpty().withMessage("لطفا رمز عبور جدید را وارد کنید"),
     body("reset_password_token")
+        .trim()
         .notEmpty()
         .withMessage("لطفا توکن را وارد کنید")
         .custom(async (value) => {
@@ -115,7 +121,12 @@ router.post(
 router.post(
     "/resend-email-activation-code",
     isGuestMiddleWare,
-    body("email").notEmpty().withMessage("لطفا ایمیل خود را وارد کنید").isEmail().withMessage("ایمیل نامعتبر است"),
+    body("email")
+        .trim()
+        .notEmpty()
+        .withMessage("لطفا ایمیل خود را وارد کنید")
+        .isEmail()
+        .withMessage("ایمیل نامعتبر است"),
     wrappedPostResendEmailActivationCode
 );
 
@@ -139,6 +150,7 @@ router.post(
     "/profile/new-password",
     isAuthMiddleWare,
     body("password")
+        .trim()
         .notEmpty()
         .withMessage("لطفا رمز عبور فعلی خود را وارد کنید")
         .custom(async (value, { req }) => {
@@ -149,8 +161,9 @@ router.post(
                 throw new Error("رمز عبور فعلی شما اشتباه است");
             }
         }),
-    body("new_password").notEmpty().withMessage("لطفا رمز عبور جدید خود را وارد کنید"),
+    body("new_password").trim().notEmpty().withMessage("لطفا رمز عبور جدید خود را وارد کنید"),
     body("confirm_password")
+        .trim()
         .notEmpty()
         .withMessage("لطفا تاییدیه رمز عبور جدید خود را وارد کنید")
         .custom(async (value, { req }) => {
@@ -169,6 +182,7 @@ router.post(
     "/profile/change-username",
     isAuthMiddleWare,
     body("username")
+        .trim()
         .notEmpty()
         .withMessage("لطفا نام کاربری جدید خود را وارد کنید")
         .custom(async (value, { req }) => {
@@ -183,5 +197,11 @@ router.post(
         }),
     wrappedPostProfileChangeUsername
 );
+
+router.get("/users/best", wrappedGetBestUsers);
+
+router.get("/profile/liked-questions", isAuthMiddleWare, wrappedGetLikedQuestions);
+router.get("/profile/disliked-questions", isAuthMiddleWare, wrappedGetDislikedQuestions);
+router.get("/profile/viewed-questions", isAuthMiddleWare, wrappedGetViewedQuestions);
 
 export default router;

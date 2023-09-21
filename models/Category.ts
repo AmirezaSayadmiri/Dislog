@@ -18,6 +18,7 @@ Category.init(
         name: {
             type: DataTypes.STRING,
             allowNull: false,
+            unique:true,
         },
         slug:{
             type:DataTypes.STRING,

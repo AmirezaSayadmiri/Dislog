@@ -58,6 +58,10 @@ const postAnswerLike: CustomRequestHandler = async (req, res, next) => {
             answer.dislikes = answer.dislikes! - 1;
         }
         await answer.save();
+    } else {
+        answer.likes = answer.likes! - 1;
+        await answer.save();
+        await answer.removeUlike(+req.userId!);
     }
 
     return res.status(200).json({ message: "پاسخ مورد نظر لایک شد" });
@@ -83,6 +87,10 @@ const postAnswerDislike: CustomRequestHandler = async (req, res, next) => {
             answer.likes = answer.likes! - 1;
         }
         await answer.save();
+    } else {
+        answer.dislikes = answer.dislikes! - 1;
+        await answer.save();
+        await answer.removeUDlike(+req.userId!);
     }
 
     return res.status(200).json({ message: "پاسخ مورد نظر دیسلایک شد" });
@@ -93,7 +101,7 @@ const postAnswerSelect: CustomRequestHandler = async (req, res, next) => {
 
     const answer = (await Answer.findByPk(id, { include: { model: Question, as: "Question" } })) as Answer;
 
-    if (!answer || answer.Question!.UserId !== req.userId) {
+    if (!answer || answer.Question!.UserId !== req.userId || answer.UserId == req.userId) {
         return res.status(404).json({ message: "notfound" });
     }
     if (!answer.is_selected) {
@@ -103,7 +111,7 @@ const postAnswerSelect: CustomRequestHandler = async (req, res, next) => {
 
         if (lastSelectedAnswer) {
             lastSelectedAnswer.is_selected = false;
-            await lastSelectedAnswer.save()
+            await lastSelectedAnswer.save();
             const userProfile = (await UserProfile.findOne({
                 where: { UserId: lastSelectedAnswer.UserId! },
             })) as UserProfile;
@@ -115,21 +123,19 @@ const postAnswerSelect: CustomRequestHandler = async (req, res, next) => {
         const userProfile = (await UserProfile.findOne({ where: { UserId: answer.UserId! } })) as UserProfile;
         userProfile.score = userProfile.score! + 10;
         await userProfile.save();
+    } else {
+        answer.is_selected = false;
+        const userProfile = (await UserProfile.findOne({ where: { UserId: answer.UserId } })) as UserProfile;
+        userProfile.score = +userProfile.score! - 10;
+        await answer.save();
+        await userProfile.save();
     }
 
     return res.status(200).json({ message: "پاسخ مورد نظر برگزیده شد" });
 };
 
-const wrappedPostAnswer = wrapperRequestHandler(postAnswer);
-const wrappedPostAnswerImage = wrapperRequestHandler(postAnswerImage);
-const wrappedPostAnswerLike = wrapperRequestHandler(postAnswerLike);
-const wrappedPostAnswerDislike = wrapperRequestHandler(postAnswerDislike);
-const wrappedPostAnswerSelect = wrapperRequestHandler(postAnswerSelect);
-
-export {
-    wrappedPostAnswer,
-    wrappedPostAnswerImage,
-    wrappedPostAnswerLike,
-    wrappedPostAnswerDislike,
-    wrappedPostAnswerSelect,
-};
+export const wrappedPostAnswer = wrapperRequestHandler(postAnswer);
+export const wrappedPostAnswerImage = wrapperRequestHandler(postAnswerImage);
+export const wrappedPostAnswerLike = wrapperRequestHandler(postAnswerLike);
+export const wrappedPostAnswerDislike = wrapperRequestHandler(postAnswerDislike);
+export const wrappedPostAnswerSelect = wrapperRequestHandler(postAnswerSelect);
