@@ -21,6 +21,7 @@ class Question extends Model<InferAttributes<Question>, InferCreationAttributes<
     declare dislikes: number | null;
     declare views: number | null;
     declare slug: string | null;
+    declare is_active: boolean | null;
     declare is_closed: boolean | null;
     declare UserId?: number | null;
     declare CategoryId?: number | null;
@@ -91,6 +92,10 @@ Question.init(
         slug: {
             type: DataTypes.STRING,
             allowNull: true,
+        },
+        is_active: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
         },
         is_closed: {
             type: DataTypes.BOOLEAN,

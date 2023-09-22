@@ -13,6 +13,8 @@ import {
     wrappedPostQuestionView,
     wrappedPutQuestions,
     wrappedDeleteQuestionImage,
+    wrappedPostActiveQuestion,
+    wrappedGetAllQuestions,
 } from "../controllers/questionControllers";
 import { body, param } from "express-validator";
 import Question from "../models/Question";
@@ -23,19 +25,6 @@ import Tag from "../models/Tag";
 import isAdminMiddleWare from "../middlewares/isAdminMiddleWare";
 
 const router = express.Router();
-
-router.post(
-    "/questions/:questionId/image",
-    isAuthMiddleWare,
-    param("questionId").custom(async (value, { req }) => {
-        const question = await Question.findOne({ where: { id: value, UserId: req.userId } });
-        if (!question) {
-            throw new Error("لطفا آیدی سوال خود را تعیین کنید");
-        }
-    }),
-    multer({ storage: questionImageStorage, fileFilter: questionImageFilter }).single("image"),
-    wrappedPostQuestionImage
-);
 
 router.get(
     "/questions/:slug/:id",
@@ -94,14 +83,6 @@ router.post(
 router.post(
     "/questions/:questionId/image",
     isAuthMiddleWare,
-    param("questionId")
-        .trim()
-        .custom(async (value, { req }) => {
-            const question = await Question.findOne({ where: { id: value, UserId: req.userId } });
-            if (!question) {
-                throw new Error("لطفا آیدی سوال خود را تعیین کنید");
-            }
-        }),
     multer({ storage: questionImageStorage, fileFilter: questionImageFilter }).single("image"),
     wrappedPostQuestionImage
 );
@@ -109,14 +90,6 @@ router.post(
 router.delete(
     "/questions/:questionId/image",
     isAuthMiddleWare,
-    param("questionId")
-        .trim()
-        .custom(async (value, { req }) => {
-            const question = await Question.findOne({ where: { id: value, UserId: req.userId } });
-            if (!question) {
-                throw new Error("لطفا آیدی سوال خود را تعیین کنید");
-            }
-        }),
     wrappedDeleteQuestionImage
 );
 
@@ -125,7 +98,6 @@ router.get("/questions", wrappedGetQuestions);
 router.put(
     "/questions/:id",
     isAuthMiddleWare,
-    isAdminMiddleWare,
     body("title")
         .trim()
         .notEmpty()
@@ -165,6 +137,10 @@ router.put(
         }),
     wrappedPutQuestions
 );
-router.delete("/questions/:id", isAuthMiddleWare, isAdminMiddleWare, wrappedDeleteQuestion);
+router.delete("/questions/:id", isAuthMiddleWare, wrappedDeleteQuestion);
+
+router.post("/questions/:id/active", isAuthMiddleWare, isAdminMiddleWare, wrappedPostActiveQuestion);
+
+router.get("/questions/all", isAuthMiddleWare, isAdminMiddleWare, wrappedGetAllQuestions);
 
 export default router;

@@ -15,6 +15,8 @@ import Question from "./models/Question";
 import Category from "./models/Category";
 import Answer from "./models/Answer";
 import Tag from "./models/Tag";
+import Ticket from "./models/Ticket";
+import ticketRoutes from "./routes/ticketRoutes";
 
 const app = express();
 
@@ -33,6 +35,7 @@ app.use(questionRoutes);
 app.use(answerRoutes);
 app.use(categoryRoutes);
 app.use(tagRoutes);
+app.use(ticketRoutes);
 
 app.use((req, res, next) => {
     return res.status(404).json({ message: "notfound" });
@@ -122,6 +125,9 @@ User.belongsToMany(Answer, {
 
 Tag.belongsToMany(Question, { through: "QuestionTag", as: "Question", foreignKey: "tagId" });
 Question.belongsToMany(Tag, { through: "QuestionTag", as: "Tag", foreignKey: "questionId" });
+
+User.hasMany(Ticket, { foreignKey: { allowNull: false }, onDelete: "CASCADE" });
+Ticket.belongsTo(User);
 
 sequelize
     .sync({ force: false })

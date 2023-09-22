@@ -23,6 +23,7 @@ class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
     declare reset_password_token: string | null;
     declare role: string | null;
     declare is_active: boolean | null;
+    declare UserProfile?: any | null;
 
     // associations
     declare getQlike: HasManyGetAssociationsMixin<Question>;

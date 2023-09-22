@@ -19,8 +19,9 @@ class Answer extends Model<InferAttributes<Answer>, InferCreationAttributes<Answ
     declare likes: number | null;
     declare dislikes: number | null;
     declare UserId?: number | null;
-    declare QuestionId?: number | null;
     declare is_selected: boolean | null;
+    declare is_active: boolean | null;
+    declare QuestionId?: number | null;
     declare Question?: Question | null;
 
     // associations
@@ -74,6 +75,10 @@ Answer.init(
             type: DataTypes.INTEGER,
             allowNull: false,
             defaultValue: 0,
+        },
+        is_active: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
         },
     },
     { sequelize, timestamps: true }

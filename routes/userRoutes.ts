@@ -8,13 +8,17 @@ import isAuthMiddleWare from "../middlewares/isAuthMiddleWare";
 import isGuestMiddleWare from "../middlewares/isGuestMiddleWare";
 import {
     wrappedDeleteProfileImage,
+    wrappedDeleteUser,
     wrappedGetBestUsers,
     wrappedGetDislikedQuestions,
     wrappedGetLikedQuestions,
     wrappedGetProfile,
     wrappedGetUser,
+    wrappedGetUsers,
     wrappedGetViewedQuestions,
+    wrappedPostActiveUser,
     wrappedPostFollowUser,
+    wrappedPostGiveAccessUser,
     wrappedPostLogin,
     wrappedPostProfile,
     wrappedPostProfileChangeUsername,
@@ -28,6 +32,7 @@ import {
     wrappedPostResetPasswordNew,
     wrappedPostUnFollowUser,
 } from "../controllers/userController";
+import isAdminMiddleWare from "../middlewares/isAdminMiddleWare";
 
 const router = express.Router();
 
@@ -173,6 +178,11 @@ router.post(
         }),
     wrappedPostProfileNewPassword
 );
+
+router.get("/users", isAuthMiddleWare, isAdminMiddleWare, wrappedGetUsers);
+router.post("/users/:id/active", isAuthMiddleWare, isAdminMiddleWare, wrappedPostActiveUser);
+router.post("/users/:id/access", isAuthMiddleWare, isAdminMiddleWare, wrappedPostGiveAccessUser);
+router.delete("/users/:id", isAuthMiddleWare, isAdminMiddleWare, wrappedDeleteUser);
 
 router.get("/users/:username", wrappedGetUser);
 router.post("/users/:username/follow", isAuthMiddleWare, wrappedPostFollowUser);

@@ -4,7 +4,7 @@ import UserProfile from "../models/UserProfile";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import sendEmail from "../helpers/sendEmail";
-import { Op } from "sequelize";
+import { Op, where } from "sequelize";
 import { v4 } from "uuid";
 import fs from "fs";
 import path from "path";
@@ -462,6 +462,59 @@ const getViewedQuestions: CustomRequestHandler = async (req, res, next) => {
     return res.status(200).json({ questions });
 };
 
+const getUsers: CustomRequestHandler = async (req, res, next) => {
+    const users = await User.findAll({ include: { model: UserProfile, as: "UserProfile" } });
+    return res.status(200).json({ users });
+};
+
+const deleteUser: CustomRequestHandler = async (req, res, next) => {
+    const { id } = req.params;
+    const user = await User.findOne({ where: { id }, include: { model: UserProfile, as: "UserProfile" } });
+
+    if (!user) {
+        return next();
+    }
+
+    if (user.UserProfile.image) {
+        deleteFile(user.UserProfile.image);
+    }
+
+    await user.destroy();
+
+    return res.status(200).json({ message: "کاربر حذف شد" });
+};
+
+const postActiveUser: CustomRequestHandler = async (req, res, next) => {
+    const { id } = req.params;
+    const user = await User.findOne({ where: { id }, include: { model: UserProfile, as: "UserProfile" } });
+
+    if (!user) {
+        return next();
+    }
+
+    user.is_active = !user.is_active;
+    await user.save();
+
+    return res.status(200).json({ message: `کاربر ${user.is_active ? "فعال" : "غیر فعال"} شد` });
+};
+
+const postGiveAccessUser: CustomRequestHandler = async (req, res, next) => {
+    const { id } = req.params;
+    const user = await User.findOne({
+        where: { id },
+        include: { model: UserProfile, as: "UserProfile" },
+    });
+
+    if (!user) {
+        return next();
+    }
+
+    user.role = user.role === "admin" ? "ordinary" : "admin";
+    await user.save();
+
+    return res.status(200).json({ message: "عملیات انجام شد" });
+};
+
 export const wrappedPostRegister = wrapperRequestHandler(postRegister);
 export const wrappedPostRegisterActivation = wrapperRequestHandler(postRegisterActivation);
 export const wrappedPostLogin = wrapperRequestHandler(postLogin);
@@ -482,3 +535,7 @@ export const wrappedGetBestUsers = wrapperRequestHandler(getBestUsers);
 export const wrappedGetLikedQuestions = wrapperRequestHandler(getLikedQuestions);
 export const wrappedGetDislikedQuestions = wrapperRequestHandler(getDislikedQuestions);
 export const wrappedGetViewedQuestions = wrapperRequestHandler(getViewedQuestions);
+export const wrappedGetUsers = wrapperRequestHandler(getUsers);
+export const wrappedDeleteUser = wrapperRequestHandler(deleteUser);
+export const wrappedPostActiveUser = wrapperRequestHandler(postActiveUser);
+export const wrappedPostGiveAccessUser = wrapperRequestHandler(postGiveAccessUser);

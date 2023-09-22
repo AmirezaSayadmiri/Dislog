@@ -41,10 +41,15 @@ const postQuestionImage: CustomRequestHandler = async (req, res, next) => {
     }
 
     const questionId = req.params.questionId;
-    const question = (await Question.findOne({ where: { id: questionId } })) as Question;
 
-    if(question.image){
-        deleteFile(question.image)
+    const question = await Question.findOne({ where: { id: questionId, UserId: +req.userId! } });
+
+    if (!question) {
+        return next();
+    }
+
+    if (question.image) {
+        deleteFile(question.image);
     }
 
     question.image = image.path;
@@ -54,31 +59,38 @@ const postQuestionImage: CustomRequestHandler = async (req, res, next) => {
 };
 
 const deleteQuestionImage: CustomRequestHandler = async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json(errors);
+    const questionId = req.params.questionId;
+    let options: any = {
+        where: { id: questionId },
+    };
+    if (!req.isAdmin) {
+        options = {
+            where: {
+                ...options.where,
+                is_active: true,
+                UserId: +req.userId!,
+            },
+        };
+    }
+    const question = (await Question.findOne(options)) as Question;
+
+    if (!question) {
+        return next();
     }
 
- 
-    const questionId = req.params.questionId;
-    const question = (await Question.findOne({ where: { id: questionId } })) as Question;
-
-    if(question.image){
-        deleteFile(question.image)
+    if (question.image) {
+        deleteFile(question.image);
         question.image = null;
         await question.save();
     }
 
-
     return res.status(200).json({ message: "عکس سوال با موفقیت حذف شد" });
 };
-
-
 
 const getQuestion: CustomRequestHandler = async (req, res, next) => {
     const id = req.params.id;
     const question = await Question.findOne({
-        where: { id },
+        where: { id, is_active: true },
         include: [
             { model: User, as: "User", include: [{ model: UserProfile, as: "UserProfile" }] },
             {
@@ -100,7 +112,7 @@ const getQuestion: CustomRequestHandler = async (req, res, next) => {
 const postQuestionView: CustomRequestHandler = async (req, res, next) => {
     const id = req.params.id;
 
-    const question = (await Question.findByPk(id)) as Question;
+    const question = (await Question.findOne({ where: { id, is_active: true } })) as Question;
 
     if (!question) {
         return res.status(404).json({ message: "notfound" });
@@ -118,7 +130,7 @@ const postQuestionView: CustomRequestHandler = async (req, res, next) => {
 const postQuestionLike: CustomRequestHandler = async (req, res, next) => {
     const id = req.params.id;
 
-    const question = (await Question.findByPk(id)) as Question;
+    const question = (await Question.findOne({ where: { id, is_active: true } })) as Question;
 
     if (!question) {
         return res.status(404).json({ message: "notfound" });
@@ -147,7 +159,7 @@ const postQuestionLike: CustomRequestHandler = async (req, res, next) => {
 const postQuestionDislike: CustomRequestHandler = async (req, res, next) => {
     const id = req.params.id;
 
-    const question = (await Question.findByPk(id)) as Question;
+    const question = (await Question.findOne({ where: { id, is_active: true } })) as Question;
 
     if (!question) {
         return res.status(404).json({ message: "notfound" });
@@ -176,7 +188,7 @@ const postQuestionDislike: CustomRequestHandler = async (req, res, next) => {
 const postQuestionClose: CustomRequestHandler = async (req, res, next) => {
     const id = req.params.id;
 
-    const question = (await Question.findOne({ where: { id, UserId: req.userId } })) as Question;
+    const question = (await Question.findOne({ where: { id, UserId: req.userId, is_active: true } })) as Question;
 
     if (!question) {
         return res.status(404).json({ message: "notfound" });
@@ -193,6 +205,7 @@ const getLatestQuestions: CustomRequestHandler = async (req, res, next) => {
         limit: 8,
         order: [["createdAt", "DESC"]],
         include: { model: User, as: "User", include: [{ model: UserProfile, as: "UserProfile" }] },
+        where: { is_active: true },
     });
 
     return res.status(200).json({ questions });
@@ -209,7 +222,7 @@ const getQuestions: CustomRequestHandler = async (req, res, next) => {
             { model: Tag, as: "Tag" },
         ],
         order: [["createdAt", "DESC"]],
-        where: {},
+        where: { is_active: true },
     };
 
     if (q) {
@@ -328,7 +341,6 @@ const getQuestions: CustomRequestHandler = async (req, res, next) => {
 };
 
 const putQuestion: CustomRequestHandler = async (req, res, next) => {
-    console.log("first");
     const { title, body, tags } = req.body;
     const id = req.params.id;
 
@@ -336,8 +348,19 @@ const putQuestion: CustomRequestHandler = async (req, res, next) => {
     if (!errors.isEmpty()) {
         return res.status(400).json(errors);
     }
-    console.log(id);
-    const question = await Question.findByPk(+id);
+
+    let options: any = { where: { id } };
+    if (!req.isAdmin) {
+        options = {
+            where: {
+                ...options.where,
+                is_active: true,
+                UserId: +req.userId!,
+            },
+        };
+    }
+
+    const question = await Question.findOne(options);
 
     if (!question) {
         return next();
@@ -359,15 +382,58 @@ const putQuestion: CustomRequestHandler = async (req, res, next) => {
 const deleteQuestion: CustomRequestHandler = async (req, res, next) => {
     const id = req.params.id;
 
-    const question = await Question.findByPk(id);
+    let options: any = {
+        where: { id },
+    };
+
+    if (!req.isAdmin) {
+        options = {
+            where: {
+                ...options.where,
+                is_active: true,
+                UserId: +req.userId!,
+            },
+        };
+    }
+    const question = (await Question.findOne(options)) as Question;
 
     if (!question) {
         return next();
     }
 
+    if (question.image) {
+        deleteFile(question.image);
+    }
+
     await question.destroy();
 
     return res.status(200).json({ message: "پرسش حذف شد" });
+};
+
+const postActiveQuestion: CustomRequestHandler = async (req, res, next) => {
+    const id = req.params.id;
+
+    const question = (await Question.findOne({ where: { id } })) as Question;
+
+    if (!question) {
+        return next();
+    }
+
+    question.is_active = !question.is_active;
+    await question.save();
+
+    return res.status(200).json({ message: ` پرسش ${question.is_active ? "فعال" : "غیر فعال"} شد` });
+};
+
+const getAllQuestions: CustomRequestHandler = async (req, res, next) => {
+    const questions = await Question.findAll({
+        include: [
+            { model: User, as: "User", include: [{ model: UserProfile, as: "UserProfile" }] },
+            { model: Tag, as: "Tag" },
+            { model: Category, as: "Category" },
+        ],
+    });
+    return res.status(200).json({ questions });
 };
 
 export const wrappedPostQuestion = wrapperRequestHandler(postQuestion);
@@ -382,3 +448,5 @@ export const wrappedGetLatestQuestions = wrapperRequestHandler(getLatestQuestion
 export const wrappedGetQuestions = wrapperRequestHandler(getQuestions);
 export const wrappedPutQuestions = wrapperRequestHandler(putQuestion);
 export const wrappedDeleteQuestion = wrapperRequestHandler(deleteQuestion);
+export const wrappedPostActiveQuestion = wrapperRequestHandler(postActiveQuestion);
+export const wrappedGetAllQuestions = wrapperRequestHandler(getAllQuestions);
