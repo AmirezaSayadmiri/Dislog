@@ -31,7 +31,8 @@ const postTag: CustomRequestHandler = async (req, res, next) => {
     }
 
     const tag = (await Tag.create({ name })) as Tag;
-    tag.slug = tag.name!.replaceAll(" ", "-").replaceAll("?", "").replaceAll("؟", "");
+    tag.slug = tag.name!.replace(/\s/g, "-");
+    tag.slug = tag.slug!.replace(/[؟|?]/g, "-");
     await tag.save();
 
     return res.status(200).json({ message: "تگ ساخته شد" });
@@ -53,7 +54,9 @@ const putTag: CustomRequestHandler = async (req, res, next) => {
     }
 
     tag.name = name;
-    tag.slug = name.replaceAll(" ", "-").replaceAll("?", "").replaceAll("؟", "");
+    tag.slug = tag.name!.replace(/\s/g, "-");
+    tag.slug = tag.slug!.replace(/[؟|?]/g, "-");    await tag.save();
+
     await tag.save();
 
     return res.status(200).json({ message: "تگ ویرایش شد" });

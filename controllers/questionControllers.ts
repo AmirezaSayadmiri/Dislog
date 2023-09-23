@@ -20,7 +20,8 @@ const postQuestion: CustomRequestHandler = async (req, res, next) => {
     const { title, body, CategoryId, tags } = req.body;
 
     const question = await Question.create({ title, body, UserId: +req.userId!, CategoryId });
-    question.slug = question.title!.replaceAll(" ", "-").replaceAll("?", "").replaceAll("؟", "");
+    question.slug = question.title!.replace(/\s/g, "-");
+    question.slug = question.slug!.replace(/[؟|?]/g, "");
     tags.map(async (tag: number) => {
         await question.addTag(tag);
     });
@@ -367,6 +368,8 @@ const putQuestion: CustomRequestHandler = async (req, res, next) => {
     }
 
     question.title = title;
+    question.slug = question.title!.replace(/\s/g, "-");
+    question.slug = question.slug!.replace(/[؟|?]/g, "");
     question.body = body;
     tags.map(async (tag: string) => {
         const hasTag = await question.hasTag(+tag);
@@ -395,7 +398,7 @@ const deleteQuestion: CustomRequestHandler = async (req, res, next) => {
             },
         };
     }
-    
+
     const question = (await Question.findOne(options)) as Question;
 
     if (!question) {

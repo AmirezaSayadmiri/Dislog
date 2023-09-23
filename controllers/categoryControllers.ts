@@ -30,7 +30,8 @@ const postCategory: CustomRequestHandler = async (req, res, next) => {
     }
 
     const category = (await Category.create({ name })) as Category;
-    category.slug = category.name!.replaceAll(" ", "-").replaceAll("?", "").replaceAll("؟", "");
+    category.slug = category.name!.replace(/\s/g, "-");
+    category.slug = category.slug!.replace(/[؟|?]/g, "-");
     await category.save();
 
     return res.status(200).json({ message: "دسته بندی ساخته شد" });
@@ -52,7 +53,8 @@ const putCategory: CustomRequestHandler = async (req, res, next) => {
     }
 
     category.name = name;
-    category.slug = name.replaceAll(" ", "-").replaceAll("?", "").replaceAll("؟", "");
+    category.slug = category.name!.replace(/\s/g, "-");
+    category.slug = category.slug!.replace(/[؟|?]/g, "-");
     await category.save();
 
     return res.status(200).json({ message: "دسته بندی ویرایش شد" });
