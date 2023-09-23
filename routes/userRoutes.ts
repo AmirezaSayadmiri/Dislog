@@ -14,6 +14,8 @@ import {
     wrappedGetLikedQuestions,
     wrappedGetProfile,
     wrappedGetUser,
+    wrappedGetUserAnswers,
+    wrappedGetUserQuestions,
     wrappedGetUsers,
     wrappedGetViewedQuestions,
     wrappedPostActiveUser,
@@ -213,5 +215,7 @@ router.get("/users/best", wrappedGetBestUsers);
 router.get("/profile/liked-questions", isAuthMiddleWare, wrappedGetLikedQuestions);
 router.get("/profile/disliked-questions", isAuthMiddleWare, wrappedGetDislikedQuestions);
 router.get("/profile/viewed-questions", isAuthMiddleWare, wrappedGetViewedQuestions);
+router.get("/profile/questions", isAuthMiddleWare, wrappedGetUserQuestions);
+router.get("/profile/answers", isAuthMiddleWare, wrappedGetUserAnswers);
 
 export default router;

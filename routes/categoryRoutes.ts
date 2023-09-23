@@ -3,6 +3,7 @@ import {
     wrappedDeleteCategory,
     wrappedGetCategories,
     wrappedGetCategory,
+    wrappedGetCategoryQuestions,
     wrappedPostCategory,
     wrappedPutCategory,
 } from "../controllers/categoryControllers";
@@ -49,5 +50,8 @@ router.put(
     wrappedPutCategory
 );
 router.delete("/categories/:id", isAuthMiddleWare, isAdminMiddleWare, wrappedDeleteCategory);
+
+router.get("/categories/:id/questions", wrappedGetCategoryQuestions)
+
 
 export default router;

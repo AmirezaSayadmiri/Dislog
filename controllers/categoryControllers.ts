@@ -1,6 +1,8 @@
 import { validationResult } from "express-validator";
 import Category from "../models/Category";
 import { CustomRequestHandler, wrapperRequestHandler } from "../types/types";
+import UserProfile from "../models/UserProfile";
+import User from "../models/User";
 
 const getCategories: CustomRequestHandler = async (req, res, next) => {
     const categories = await Category.findAll();
@@ -70,8 +72,32 @@ const deleteCategory: CustomRequestHandler = async (req, res, next) => {
     return res.status(200).json({ message: "دسته بندی حذف شد" });
 };
 
+const getCategoryQuestions: CustomRequestHandler = async (req, res, next) => {
+    const { id } = req.params;
+
+    const category = await Category.findByPk(+id);
+
+    if (!category) {
+        return next();
+    }
+
+    const questions = await category.getQuestions({
+        where: { is_active: true },
+        include: [
+            { model: User, as: "User", include: [{ model: UserProfile, as: "UserProfile" }] },
+            {
+                model: Category,
+                as: "Category",
+            },
+        ],
+    });
+
+    return res.status(200).json({ questions });
+};
+
 export const wrappedGetCategories = wrapperRequestHandler(getCategories);
 export const wrappedGetCategory = wrapperRequestHandler(getCategory);
 export const wrappedPostCategory = wrapperRequestHandler(postCategory);
 export const wrappedPutCategory = wrapperRequestHandler(putCategory);
 export const wrappedDeleteCategory = wrapperRequestHandler(deleteCategory);
+export const wrappedGetCategoryQuestions = wrapperRequestHandler(getCategoryQuestions);

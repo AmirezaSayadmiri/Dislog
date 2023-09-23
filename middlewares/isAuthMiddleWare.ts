@@ -11,11 +11,11 @@ const isAuthMiddleWare: CustomRequestHandler = async (req, res, next) => {
                 userId: number;
             };
             if (decodedToken) {
-                const user = await User.findOne({ where: { id: decodedToken.userId } });
+                const user = await User.findOne({ where: { id: decodedToken.userId, is_active: true } });
                 if (user) {
                     req.userId = decodedToken.userId;
-                    if(user.role==="admin"){
-                        req.isAdmin=true;
+                    if (user.role === "admin") {
+                        req.isAdmin = true;
                     }
                     return next();
                 }
@@ -23,7 +23,7 @@ const isAuthMiddleWare: CustomRequestHandler = async (req, res, next) => {
             }
             return res.status(401).json({ message: "unauthorizated" });
         } catch (err) {
-            console.log(err)
+            console.log(err);
             return res.status(401).json({ message: "unauthorizated" });
         }
     }

@@ -4,13 +4,16 @@ import UserProfile from "../models/UserProfile";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import sendEmail from "../helpers/sendEmail";
-import { Op, where } from "sequelize";
+import { Op, Sequelize, where } from "sequelize";
 import { v4 } from "uuid";
 import fs from "fs";
 import path from "path";
 import deleteFile from "../helpers/deleteFile";
 import { CustomRequestHandler, wrapperRequestHandler } from "../types/types";
 import sequelize from "../database";
+import Question from "../models/Question";
+import Answer from "../models/Answer";
+import Tag from "../models/Tag";
 
 const SECRET_KEY = "supersupersecretkey";
 
@@ -430,7 +433,7 @@ const postProfileChangeUsername: CustomRequestHandler = async (req, res, next) =
 
 const getBestUsers: CustomRequestHandler = async (req, res, next) => {
     const users = await User.findAll({
-        include: [{ model: UserProfile }],
+        include: [{ model: UserProfile, where: { score: { [Op.gt]: 0 } } }],
         order: [[sequelize.literal("UserProfile.score"), "DESC"]],
         limit: 4,
     });
@@ -515,6 +518,21 @@ const postGiveAccessUser: CustomRequestHandler = async (req, res, next) => {
     return res.status(200).json({ message: "عملیات انجام شد" });
 };
 
+const getUserQuestions: CustomRequestHandler = async (req, res, next) => {
+    const questions = await Question.findAll({ where: { UserId: +req.userId! }, include: [{ model: Tag, as: "Tag" }] });
+
+    return res.status(200).json({ questions });
+};
+
+const getUserAnswers: CustomRequestHandler = async (req, res, next) => {
+    const answers = await Answer.findAll({
+        where: { UserId: +req.userId! },
+        include: { model: Question, as: "Question" },
+    });
+
+    return res.status(200).json({ answers });
+};
+
 export const wrappedPostRegister = wrapperRequestHandler(postRegister);
 export const wrappedPostRegisterActivation = wrapperRequestHandler(postRegisterActivation);
 export const wrappedPostLogin = wrapperRequestHandler(postLogin);
@@ -539,3 +557,5 @@ export const wrappedGetUsers = wrapperRequestHandler(getUsers);
 export const wrappedDeleteUser = wrapperRequestHandler(deleteUser);
 export const wrappedPostActiveUser = wrapperRequestHandler(postActiveUser);
 export const wrappedPostGiveAccessUser = wrapperRequestHandler(postGiveAccessUser);
+export const wrappedGetUserQuestions = wrapperRequestHandler(getUserQuestions);
+export const wrappedGetUserAnswers = wrapperRequestHandler(getUserAnswers);

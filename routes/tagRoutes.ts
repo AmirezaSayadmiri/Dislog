@@ -1,5 +1,5 @@
 import express from "express";
-import { wrappedDeleteTag, wrappedGetTags, wrappedPostTag, wrappedPutTag } from "../controllers/tagControllers";
+import { wrappedDeleteTag, wrappedGetTag, wrappedGetTagQuestions, wrappedGetTags, wrappedPostTag, wrappedPutTag } from "../controllers/tagControllers";
 import isAuthMiddleWare from "../middlewares/isAuthMiddleWare";
 import isAdminMiddleWare from "../middlewares/isAdminMiddleWare";
 import Tag from "../models/Tag";
@@ -25,7 +25,9 @@ router.post(
         }),
     wrappedPostTag
 );
-router.get("/tags/:id");
+
+router.get("/tags/:id", wrappedGetTag);
+
 router.put(
     "/tags/:id",
     isAuthMiddleWare,
@@ -43,5 +45,7 @@ router.put(
     wrappedPutTag
 );
 router.delete("/tags/:id", isAuthMiddleWare, isAdminMiddleWare, wrappedDeleteTag);
+
+router.get("/tags/:id/questions", wrappedGetTagQuestions);
 
 export default router;

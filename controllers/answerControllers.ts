@@ -203,16 +203,28 @@ const putAnswer: CustomRequestHandler = async (req, res, next) => {
 const deleteAnswer: CustomRequestHandler = async (req, res, next) => {
     const { id } = req.params;
 
-    const answer = (await Answer.findOne({ where: { id } })) as Answer;
+    let options: any = { where: { id } };
+    
+    if (!req.isAdmin) {
+        options = {
+            where: {
+                ...options.where,
+                is_active: true,
+                UserId: +req.userId!,
+            },
+        };
+    }
 
-    if (!answer || (!req.isAdmin && +req.userId! !== answer.id)) {
+    const answer = (await Answer.findOne(options)) as Answer;
+
+    if (!answer) {
         return next();
     }
 
     if (answer.image) {
         deleteFile(answer.image);
     }
-    
+
     await answer.destroy();
 
     return res.status(200).json({ message: "پاسخ حذف شد" });

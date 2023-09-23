@@ -395,6 +395,7 @@ const deleteQuestion: CustomRequestHandler = async (req, res, next) => {
             },
         };
     }
+    
     const question = (await Question.findOne(options)) as Question;
 
     if (!question) {
