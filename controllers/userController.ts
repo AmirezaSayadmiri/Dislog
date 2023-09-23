@@ -224,6 +224,10 @@ const getProfile: CustomRequestHandler = async (req, res, next) => {
     const user = (await User.findOne({ where: { id: req.userId } })) as User;
     const profile = (await UserProfile.findOne({
         where: { UserId: user.id },
+        include: [
+            { model: UserProfile, as: "Follower", include: [{ model: User, as: "User" }] },
+            { model: UserProfile, as: "Following", include: [{ model: User, as: "User" }] },
+        ],
     })) as UserProfile;
     if (user && profile) {
         return res.status(200).json({
