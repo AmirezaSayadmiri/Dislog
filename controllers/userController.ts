@@ -14,6 +14,7 @@ import sequelize from "../database";
 import Question from "../models/Question";
 import Answer from "../models/Answer";
 import Tag from "../models/Tag";
+import AppError from "../AppError";
 
 const SECRET_KEY = "supersupersecretkey";
 
@@ -21,7 +22,7 @@ const postRegister: CustomRequestHandler = async (req, res, next) => {
     const { email, password } = req.body;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json(errors);
+        return next(new AppError("error", 400, errors.array()));
     }
     try {
         let user = (await User.findOne({ where: { email } })) as User;
@@ -49,7 +50,7 @@ const postRegister: CustomRequestHandler = async (req, res, next) => {
         return res.status(201).json({ message: "لطفا کد ارسال شده به ایمیل خود را وارد کنید" });
     } catch (err) {
         console.log(err);
-        res.status(500).json({ message: "خطایی رخ داد لطفا دوباره امتحان کنید" });
+        next(new AppError("خطایی رخ داد", 500));
     }
 };
 
@@ -57,28 +58,27 @@ const postRegisterActivation: CustomRequestHandler = async (req, res, next) => {
     const { activation_code } = req.body;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        res.status(400).json(errors);
-    } else {
-        try {
-            const user = await User.findOne({ where: { activation_code } });
-            if (user) {
-                user.activation_code = null;
-                user.is_active = true;
-                await user.save();
-                const accessToken = jwt.sign({ email: user.email, userId: user.id }, SECRET_KEY, { expiresIn: "10m" });
-                const refreshToken = jwt.sign({ email: user.email, userId: user.id }, SECRET_KEY, { expiresIn: "1d" });
-                return res.status(200).json({
-                    userId: user.id,
-                    user,
-                    access: accessToken,
-                    refresh: refreshToken,
-                });
-            }
-            return res.status(401).json({ message: "کد تایید وارد شده اشتباه میباشد" });
-        } catch (err) {
-            console.log(err);
-            return res.status(500).json({ message: "خطایی رخ داد لطفا دوباره امتحان کنید" });
+        return next(new AppError("error", 400, errors.array()));
+    }
+    try {
+        const user = await User.findOne({ where: { activation_code } });
+        if (user) {
+            user.activation_code = null;
+            user.is_active = true;
+            await user.save();
+            const accessToken = jwt.sign({ email: user.email, userId: user.id }, SECRET_KEY, { expiresIn: "10m" });
+            const refreshToken = jwt.sign({ email: user.email, userId: user.id }, SECRET_KEY, { expiresIn: "1d" });
+            return res.status(200).json({
+                userId: user.id,
+                user,
+                access: accessToken,
+                refresh: refreshToken,
+            });
         }
+        next(new AppError("کد تایید وارد شده اشتباه میباشد", 400));
+    } catch (err) {
+        console.log(err);
+        next(new AppError("خطایی رخ داد", 500));
     }
 };
 
@@ -86,7 +86,7 @@ const postLogin: CustomRequestHandler = async (req, res, next) => {
     const { email_username, password } = req.body;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json(errors);
+        return next(new AppError("error", 400, errors.array()));
     }
 
     const user = (await User.findOne({
@@ -96,18 +96,16 @@ const postLogin: CustomRequestHandler = async (req, res, next) => {
     })) as User;
 
     if (!user) {
-        return res.status(400).json({ message: "اطلاعات وارد شده اشتباه است" });
+        return next(new AppError("اطلاعات وارد شده اشتباه است", 400));
     }
 
     if (!user.is_active) {
-        return res.status(400).json({
-            message: "حساب کاربری شما هنوز غیر فعال است. برای فعالسازی به ایمیل خود مراجعه کنید",
-        });
+        return next(new AppError("حساب کاربری شما هنوز غیر فعال است. برای فعالسازی به ایمیل خود مراجعه کنید", 400));
     }
 
     bcrypt.compare(password, user.password!, async (err, result) => {
         if (!result) {
-            return res.status(400).json({ message: "اطلاعات وارد شده اشتباه است" });
+            return next(new AppError("اطلاعات وارد شده اشتباه است", 400));
         }
         const accessToken = jwt.sign({ email: user.email, userId: user.id }, SECRET_KEY, { expiresIn: "10m" });
         const refreshToken = jwt.sign({ email: user.email, userId: user.id }, SECRET_KEY, { expiresIn: "1d" });
@@ -123,12 +121,12 @@ const postLogin: CustomRequestHandler = async (req, res, next) => {
 const postRefresh: CustomRequestHandler = (req, res, next) => {
     const { refresh } = req.body;
     if (!refresh) {
-        return res.status(400).json({ message: "unvalid refresh token" });
+        return next(new AppError("unvalid refresh token", 400));
     }
 
     jwt.verify(refresh, SECRET_KEY, (err: any, info: any) => {
         if (err) {
-            return res.status(401).json({ message: "ex" });
+            return next(new AppError("expired", 401));
         }
         const access = jwt.sign({ email: info.email, userId: info.userId }, SECRET_KEY, { expiresIn: "10m" });
         return res.status(200).json({ access: access });
@@ -138,9 +136,11 @@ const postRefresh: CustomRequestHandler = (req, res, next) => {
 const postResetPassword: CustomRequestHandler = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json(errors);
+        return next(new AppError("error", 400, errors.array()));
     }
+
     const { email } = req.body;
+
     try {
         const user = (await User.findOne({ where: { email } })) as User;
 
@@ -157,7 +157,7 @@ const postResetPassword: CustomRequestHandler = async (req, res, next) => {
         });
     } catch (err) {
         console.log(err);
-        return res.status(500).json({ message: "خطایی رخ داد لطفا دوباره امتحان کنید" });
+        next(new AppError("خطایی رخ داد", 500));
     }
 };
 
@@ -165,7 +165,7 @@ const postResetPasswordNew: CustomRequestHandler = async (req, res, next) => {
     const { reset_password_token, password } = req.body;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json(errors);
+        return next(new AppError("error", 400, errors.array()));
     }
 
     try {
@@ -175,9 +175,8 @@ const postResetPasswordNew: CustomRequestHandler = async (req, res, next) => {
 
         const hashedPassword = bcrypt.hash(password, 12, async (err, hash) => {
             if (err) {
-                return res.status(500).json({
-                    message: "خطایی رخ داد لطفا دوباره امتحان کنید",
-                });
+                console.log(err);
+                return next(new AppError("خطایی رخ داد", 500));
             }
             user.reset_password_token = null;
             user.password = hash;
@@ -188,20 +187,22 @@ const postResetPasswordNew: CustomRequestHandler = async (req, res, next) => {
         });
     } catch (err) {
         console.log(err);
-        return res.status(500).json({ message: "خطایی رخ داد لطفا دوباره امتحان کنید" });
+        return next(new AppError("خطایی رخ داد", 500));
     }
 };
 
 const postResendEmailActivationCode: CustomRequestHandler = async (req, res, next) => {
     const { email } = req.body;
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json(errors);
+        return next(new AppError("error", 400, errors.array()));
     }
 
     const user = (await User.findOne({ where: { email } })) as User;
+
     if (!user) {
-        return res.status(400).json({ message: "ایمیل اشتباه است" });
+        return next(new AppError("ایمیل اشتباه است", 400));
     }
 
     user.activation_code = new Date().getTime().toString().slice(8);
@@ -216,7 +217,7 @@ const postResendEmailActivationCode: CustomRequestHandler = async (req, res, nex
         return res.status(201).json({ message: "لطفا کد ارسال شده به ایمیل خود را وارد کنید" });
     } catch (err) {
         console.log(err);
-        return res.status(500).json({ message: "خطایی رخ داد لطفا دوباره امتحان کنید" });
+        return next(new AppError("خطایی رخ داد", 500));
     }
 };
 
@@ -229,13 +230,15 @@ const getProfile: CustomRequestHandler = async (req, res, next) => {
             { model: UserProfile, as: "Following", include: [{ model: User, as: "User" }] },
         ],
     })) as UserProfile;
+
     if (user && profile) {
         return res.status(200).json({
             user,
             profile,
         });
     }
-    return res.status(401).json({ message: "unauthorizated" });
+
+    next(new AppError("unauthorized", 401));
 };
 
 const postProfileImage: CustomRequestHandler = async (req, res, next) => {
@@ -243,18 +246,20 @@ const postProfileImage: CustomRequestHandler = async (req, res, next) => {
     const image = req.file;
 
     if (!image) {
-        return res.status(400).json({ message: "لطفا عکس پروفایل خود را تعیین کنید" });
+        return next(new AppError("لطفا عکس پروفایل خود را تعیین کنید", 400));
     }
 
     const profile = (await UserProfile.findOne({
         where: { UserId: userId },
     })) as UserProfile;
+
     if (profile.image) {
         deleteFile(profile.image);
     }
 
     profile.image = image.path;
     await profile.save();
+
     return res.status(200).json({ message: "عکس پروفایل شما با موفقیت تغییر کرد" });
 };
 
@@ -264,13 +269,15 @@ const deleteProfileImage: CustomRequestHandler = async (req, res, next) => {
     const profile = (await UserProfile.findOne({
         where: { UserId: userId },
     })) as UserProfile;
+
     if (profile.image) {
         deleteFile(profile.image);
         profile.image = null;
         await profile.save();
         return res.status(200).json({ message: "عکس پروفایل شما با موفقیت حذف شد" });
     }
-    return res.status(400).json({ message: "شما عکس پروفایلی ندارید" });
+
+    return next(new AppError("شما عکس پروفایلی ندارید", 400));
 };
 
 const postProfile: CustomRequestHandler = async (req, res, next) => {
@@ -326,11 +333,11 @@ const postProfile: CustomRequestHandler = async (req, res, next) => {
 };
 
 const postProfileNewPassword: CustomRequestHandler = async (req, res, next) => {
-    const { password, confirm_password, new_password } = req.body;
+    const { new_password } = req.body;
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json(errors);
+        return next(new AppError("error", 400, errors.array()));
     }
 
     const userId = req.userId;
@@ -338,7 +345,8 @@ const postProfileNewPassword: CustomRequestHandler = async (req, res, next) => {
 
     bcrypt.hash(new_password, 12, async (err, hash: string) => {
         if (err) {
-            return res.status(500).json({ message: "خطایی رخ داد لطفا بعدا امتحان کنید" });
+            console.log(err);
+            next(new AppError("خطایی رخ داد", 500));
         }
 
         user.password = hash;
@@ -392,7 +400,8 @@ const postFollowUser: CustomRequestHandler = async (req, res, next) => {
         await profile.addFollowing(targetUserProfile!);
         return res.status(200).json({ message: "کاربر مورد نظر دنبال شد" });
     }
-    return res.status(400).json({ message: "شما قبلا کاربر مورد نظر را دنبال کرده اید" });
+
+    return next(new AppError("شما قبلا کاربر مورد نظر را دنبال کرده اید", 400));
 };
 
 const postUnFollowUser: CustomRequestHandler = async (req, res, next) => {
@@ -417,13 +426,14 @@ const postUnFollowUser: CustomRequestHandler = async (req, res, next) => {
         await profile.removeFollowing(targetUserProfile!);
         return res.status(200).json({ message: "کاربر مورد نظر با موفقیت آنفالو شد" });
     }
-    return res.status(400).json({ message: "شما هنوز کاربر مورد نظر را دنبال نکردید" });
+
+    return next(new AppError("شما هنوز کاربر مورد نظر را دنبال نکردید", 400));
 };
 
 const postProfileChangeUsername: CustomRequestHandler = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json(errors);
+        return next(new AppError("error", 400, errors.array()));
     }
 
     const { username } = req.body;

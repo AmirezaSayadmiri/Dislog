@@ -3,6 +3,7 @@ import { CustomRequestHandler, wrapperRequestHandler } from "../types/types";
 import Ticket from "../models/Ticket";
 import UserProfile from "../models/UserProfile";
 import User from "../models/User";
+import AppError from "../AppError";
 
 const getTickets: CustomRequestHandler = async (req, res, next) => {
     const tickets = await Ticket.findAll({
@@ -20,7 +21,7 @@ const getTickets: CustomRequestHandler = async (req, res, next) => {
 const postTickt: CustomRequestHandler = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(401).json(errors);
+        return next(new AppError("error", 400, errors.array()));
     }
 
     const { title, body } = req.body;
@@ -32,7 +33,7 @@ const postTickt: CustomRequestHandler = async (req, res, next) => {
 const putTicket: CustomRequestHandler = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(401).json(errors);
+        return next(new AppError("error", 400, errors.array()));
     }
 
     const { answer } = req.body;

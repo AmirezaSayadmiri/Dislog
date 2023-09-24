@@ -3,6 +3,7 @@ import Category from "../models/Category";
 import { CustomRequestHandler, wrapperRequestHandler } from "../types/types";
 import UserProfile from "../models/UserProfile";
 import User from "../models/User";
+import AppError from "../AppError";
 
 const getCategories: CustomRequestHandler = async (req, res, next) => {
     const categories = await Category.findAll();
@@ -43,7 +44,7 @@ const putCategory: CustomRequestHandler = async (req, res, next) => {
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json(errors);
+        return next(new AppError("error", 400, errors.array()));
     }
 
     const category = await Category.findByPk(id);

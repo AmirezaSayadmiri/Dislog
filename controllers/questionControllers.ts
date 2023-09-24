@@ -10,11 +10,12 @@ import Answer from "../models/Answer";
 import Tag from "../models/Tag";
 import { Op } from "sequelize";
 import deleteFile from "../helpers/deleteFile";
+import AppError from "../AppError";
 
 const postQuestion: CustomRequestHandler = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json(errors);
+        return next(new AppError("error", 400, errors.array()));
     }
 
     const { title, body, CategoryId, tags } = req.body;
@@ -33,12 +34,12 @@ const postQuestion: CustomRequestHandler = async (req, res, next) => {
 const postQuestionImage: CustomRequestHandler = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json(errors);
+        return next(new AppError("error", 400, errors.array()));
     }
 
     const image = req.file;
     if (!image) {
-        return res.status(400).json({ message: "لطفا عکس سوال خود را تعیین کنید" });
+        return next(new AppError("لطفا عکس سوال خود را تعیین کنید", 400));
     }
 
     const questionId = req.params.questionId;
@@ -103,8 +104,9 @@ const getQuestion: CustomRequestHandler = async (req, res, next) => {
             { model: Tag, as: "Tag" },
         ],
     });
+
     if (!question) {
-        return res.status(404).json({ message: "notfound" });
+        return next();
     }
 
     return res.status(200).json({ question });
@@ -116,7 +118,7 @@ const postQuestionView: CustomRequestHandler = async (req, res, next) => {
     const question = (await Question.findOne({ where: { id, is_active: true } })) as Question;
 
     if (!question) {
-        return res.status(404).json({ message: "notfound" });
+        next();
     }
 
     const hasViewed = await question.hasUview(+req.userId!);
@@ -134,7 +136,7 @@ const postQuestionLike: CustomRequestHandler = async (req, res, next) => {
     const question = (await Question.findOne({ where: { id, is_active: true } })) as Question;
 
     if (!question) {
-        return res.status(404).json({ message: "notfound" });
+        return next();
     }
 
     const hasLiked = await question.hasUlike(+req.userId!);
@@ -163,7 +165,7 @@ const postQuestionDislike: CustomRequestHandler = async (req, res, next) => {
     const question = (await Question.findOne({ where: { id, is_active: true } })) as Question;
 
     if (!question) {
-        return res.status(404).json({ message: "notfound" });
+        return next();
     }
 
     const hasDisliked = await question.hasUDlike(+req.userId!);
@@ -192,7 +194,7 @@ const postQuestionClose: CustomRequestHandler = async (req, res, next) => {
     const question = (await Question.findOne({ where: { id, UserId: req.userId, is_active: true } })) as Question;
 
     if (!question) {
-        return res.status(404).json({ message: "notfound" });
+        return next();
     }
 
     question.is_closed = true;
@@ -347,7 +349,7 @@ const putQuestion: CustomRequestHandler = async (req, res, next) => {
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json(errors);
+        return next(new AppError("error", 400, errors.array()));
     }
 
     let options: any = { where: { id } };

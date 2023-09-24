@@ -1,9 +1,7 @@
 import express from "express";
 import sequelize from "./database";
-import multer from "multer";
 import User from "./models/User";
 import UserProfile from "./models/UserProfile";
-import isAuthMiddleWare from "./middlewares/isAuthMiddleWare";
 import headersMiddleWare from "./middlewares/headersMiddleWare";
 import path from "path";
 import userRoutes from "./routes/userRoutes";
@@ -17,6 +15,13 @@ import Answer from "./models/Answer";
 import Tag from "./models/Tag";
 import Ticket from "./models/Ticket";
 import ticketRoutes from "./routes/ticketRoutes";
+import errorHandler from "./controllers/errorControllers";
+import AppError from "./AppError";
+
+process.on("uncaughtException", (err) => {
+    console.log(err);
+    process.exit(1);
+});
 
 const app = express();
 
@@ -38,8 +43,10 @@ app.use(tagRoutes);
 app.use(ticketRoutes);
 
 app.use((req, res, next) => {
-    return res.status(404).json({ message: "notfound" });
+    next(new AppError("notfound",404))
 });
+
+app.use(errorHandler);
 
 // relations
 UserProfile.belongsTo(User, { onDelete: "CASCADE", foreignKey: { allowNull: false } });
@@ -132,6 +139,13 @@ Ticket.belongsTo(User);
 sequelize
     .sync({ force: false })
     .then((result) => {
-        app.listen(8000);
+        const server = app.listen(8000);
+
+        process.on("unhandledRejection", (err) => {
+            console.log(err);
+            server.close(() => {
+                process.exit(1);
+            });
+        });
     })
     .catch((err) => console.log(err));

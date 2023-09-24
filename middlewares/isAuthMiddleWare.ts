@@ -2,6 +2,7 @@ import { RequestHandler } from "express";
 import jwt from "jsonwebtoken";
 import { CustomRequestHandler, wrapperRequestHandler } from "../types/types";
 import User from "../models/User";
+import AppError from "../AppError";
 
 const isAuthMiddleWare: CustomRequestHandler = async (req, res, next) => {
     const token = req.headers.authorization?.split(" ")[1];
@@ -19,15 +20,15 @@ const isAuthMiddleWare: CustomRequestHandler = async (req, res, next) => {
                     }
                     return next();
                 }
-                return res.status(401).json({ message: "unauthorizated" });
+                return next(new AppError("unauthorized", 401));
             }
-            return res.status(401).json({ message: "unauthorizated" });
+            return next(new AppError("unauthorized", 401));
         } catch (err) {
             console.log(err);
-            return res.status(401).json({ message: "unauthorizated" });
+            return next(new AppError("unauthorized", 401));
         }
     }
-    res.status(401).json({ message: "unauthorizated" });
+    return next(new AppError("unauthorized", 401));
 };
 
 export default wrapperRequestHandler(isAuthMiddleWare);

@@ -4,6 +4,7 @@ import { CustomRequestHandler, wrapperRequestHandler } from "../types/types";
 import User from "../models/User";
 import UserProfile from "../models/UserProfile";
 import Category from "../models/Category";
+import AppError from "../AppError";
 
 const getTags: CustomRequestHandler = async (req, res, next) => {
     const tags = await Tag.findAll();
@@ -27,7 +28,7 @@ const postTag: CustomRequestHandler = async (req, res, next) => {
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json(errors);
+        return next(new AppError("error", 400, errors.array()));
     }
 
     const tag = (await Tag.create({ name })) as Tag;
@@ -44,7 +45,7 @@ const putTag: CustomRequestHandler = async (req, res, next) => {
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json(errors);
+        return next(new AppError("error", 400, errors.array()));
     }
 
     const tag = await Tag.findByPk(id);
